@@ -17,7 +17,7 @@ const bridgeUrl = new URL(entry, import.meta.url);
 const bridgePath = fileURLToPath(bridgeUrl);
 if (!existsSync(bridgePath)) {
   throw new Error(
-    `Tandem bridge assets are missing at ${bridgePath}. Run \`npm install\` in the tandem-ts package so the prepare script can fetch them, or run \`node scripts/prepare.mjs\` directly.`,
+    `Tandem bridge assets are missing at ${bridgePath}. Run \`pnpm install\` (postinstall fetches them) or \`node scripts/install-runtime.mjs\` directly.`,
   );
 }
 
