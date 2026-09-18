@@ -1,0 +1,9 @@
+packages:
+  - "."
+  - "packets"
+  - "studio"
+  - "examples/*/typescript"
+
+allowBuilds:
+  esbuild: true
+  vue-demi: true

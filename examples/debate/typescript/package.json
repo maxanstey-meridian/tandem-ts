@@ -1,0 +1,18 @@
+{
+  "name": "tandem-debate-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "run": "tsx src/run.ts",
+    "typecheck": "tsc --noEmit --strict --target ES2022 --module NodeNext --moduleResolution NodeNext --types node --typeRoots ../../node_modules/@types src/*.ts tandem.config.ts"
+  },
+  "dependencies": {
+    "@maxanstey-meridian/tandem": "workspace:*",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

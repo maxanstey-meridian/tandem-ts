@@ -1,0 +1,1097 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0/osx-arm64",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {},
+    ".NETCoreApp,Version=v10.0/osx-arm64": {
+      "Tandem.NodeApiSpike.Bridge/0.1.0": {
+        "dependencies": {
+          "Meridian.Tandem": "0.1.0",
+          "Meridian.Tandem.Advanced": "0.1.0",
+          "Meridian.Tandem.Ledger": "0.1.0",
+          "Meridian.Tandem.OpenAICompatible": "0.1.0",
+          "Meridian.Tandem.Terminal": "0.1.0",
+          "Microsoft.Extensions.AI.OpenAI": "10.8.3",
+          "Microsoft.JavaScript.NodeApi": "0.9.26",
+          "Microsoft.JavaScript.NodeApi.Generator": "0.9.26",
+          "OpenAI": "2.12.0",
+          "System.ClientModel": "1.14.0"
+        },
+        "runtime": {
+          "Tandem.NodeApiSpike.Bridge.dll": {}
+        }
+      },
+      "FluentValidation/12.1.1": {
+        "runtime": {
+          "lib/net8.0/FluentValidation.dll": {
+            "assemblyVersion": "12.0.0.0",
+            "fileVersion": "12.1.1.0"
+          }
+        }
+      },
+      "Google.Protobuf/3.30.2": {
+        "runtime": {
+          "lib/net5.0/Google.Protobuf.dll": {
+            "assemblyVersion": "3.30.2.0",
+            "fileVersion": "3.30.2.0"
+          }
+        }
+      },
+      "Humanizer.Core/3.0.10": {
+        "runtime": {
+          "lib/net10.0/Humanizer.dll": {
+            "assemblyVersion": "3.0.0.0",
+            "fileVersion": "3.0.10.37104"
+          }
+        }
+      },
+      "Json.More.Net/3.0.1": {
+        "runtime": {
+          "lib/net10.0/Json.More.dll": {
+            "assemblyVersion": "3.0.0.0",
+            "fileVersion": "3.0.1.0"
+          }
+        }
+      },
+      "JsonPointer.Net/7.0.2": {
+        "dependencies": {
+          "Humanizer.Core": "3.0.10",
+          "Json.More.Net": "3.0.1"
+        },
+        "runtime": {
+          "lib/net10.0/JsonPointer.Net.dll": {
+            "assemblyVersion": "7.0.0.0",
+            "fileVersion": "7.0.2.0"
+          }
+        }
+      },
+      "JsonSchema.Net/9.4.0": {
+        "dependencies": {
+          "JsonPointer.Net": "7.0.2"
+        },
+        "runtime": {
+          "lib/net9.0/JsonSchema.Net.dll": {
+            "assemblyVersion": "9.0.0.0",
+            "fileVersion": "9.4.0.0"
+          }
+        }
+      },
+      "JsonSchema.Net.Generation/7.3.11": {
+        "dependencies": {
+          "Humanizer.Core": "3.0.10",
+          "JsonSchema.Net": "9.4.0"
+        },
+        "runtime": {
+          "lib/net10.0/JsonSchema.Net.Generation.dll": {
+            "assemblyVersion": "7.0.0.0",
+            "fileVersion": "7.3.11.0"
+          }
+        }
+      },
+      "Meridian.Tandem/0.1.0": {
+        "dependencies": {
+          "FluentValidation": "12.1.1",
+          "JsonSchema.Net.Generation": "7.3.11",
+          "Microsoft.Agents.AI": "1.16.0",
+          "Microsoft.Agents.AI.Workflows": "1.16.0",
+          "Microsoft.Extensions.AI": "10.8.3"
+        },
+        "runtime": {
+          "lib/net10.0/Tandem.dll": {
+            "assemblyVersion": "0.1.0.0",
+            "fileVersion": "0.1.0.0"
+          }
+        }
+      },
+      "Meridian.Tandem.Advanced/0.1.0": {
+        "dependencies": {
+          "FluentValidation": "12.1.1",
+          "Meridian.Tandem": "0.1.0",
+          "Microsoft.Agents.AI.Harness": "1.16.0",
+          "Microsoft.Agents.AI.Tools.Shell": "1.16.0-preview.260730.1",
+          "Microsoft.Extensions.AI": "10.8.3",
+          "Tavily": "1.0.1"
+        },
+        "runtime": {
+          "lib/net10.0/Tandem.Advanced.dll": {
+            "assemblyVersion": "0.1.0.0",
+            "fileVersion": "0.1.0.0"
+          }
+        }
+      },
+      "Meridian.Tandem.Ledger/0.1.0": {
+        "dependencies": {
+          "Meridian.Tandem": "0.1.0",
+          "Microsoft.Data.Sqlite": "10.0.10",
+          "SQLitePCLRaw.bundle_e_sqlite3": "2.1.12"
+        },
+        "runtime": {
+          "lib/net10.0/Tandem.Ledger.dll": {
+            "assemblyVersion": "0.1.0.0",
+            "fileVersion": "0.1.0.0"
+          }
+        }
+      },
+      "Meridian.Tandem.OpenAICompatible/0.1.0": {
+        "dependencies": {
+          "Microsoft.Extensions.AI": "10.8.3",
+          "OpenAI": "2.12.0",
+          "System.ClientModel": "1.14.0"
+        },
+        "runtime": {
+          "lib/net10.0/Tandem.OpenAICompatible.dll": {
+            "assemblyVersion": "0.1.0.0",
+            "fileVersion": "0.1.0.0"
+          }
+        }
+      },
+      "Meridian.Tandem.Terminal/0.1.0": {
+        "dependencies": {
+          "Meridian.Tandem": "0.1.0",
+          "Spectre.Console": "0.57.2"
+        },
+        "runtime": {
+          "lib/net10.0/Tandem.Terminal.dll": {
+            "assemblyVersion": "0.1.0.0",
+            "fileVersion": "0.1.0.0"
+          }
+        }
+      },
+      "Microsoft.Agents.AI/1.16.0": {
+        "dependencies": {
+          "Microsoft.Agents.AI.Abstractions": "1.16.0",
+          "Microsoft.Extensions.AI": "10.8.3",
+          "Microsoft.Extensions.AI.Abstractions": "10.8.3",
+          "Microsoft.Extensions.AI.Evaluation": "10.7.0",
+          "Microsoft.Extensions.Compliance.Abstractions": "10.5.0",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.10",
+          "Microsoft.Extensions.FileSystemGlobbing": "10.0.6",
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.10",
+          "Microsoft.Extensions.VectorData.Abstractions": "10.7.0",
+          "Microsoft.ML.Tokenizers": "2.0.0"
+        },
+        "runtime": {
+          "lib/net10.0/Microsoft.Agents.AI.dll": {
+            "assemblyVersion": "1.16.0.0",
+            "fileVersion": "1.16.0.0"
+          }
+        }
+      },
+      "Microsoft.Agents.AI.Abstractions/1.16.0": {
+        "dependencies": {
+          "Microsoft.Extensions.AI.Abstractions": "10.8.3"
+        },
+        "runtime": {
+          "lib/net10.0/Microsoft.Agents.AI.Abstractions.dll": {
+            "assemblyVersion": "1.16.0.0",
+            "fileVersion": "1.16.0.0"
+          }
+        }
+      },
+      "Microsoft.Agents.AI.Harness/1.16.0": {
+        "dependencies": {
+          "Microsoft.Agents.AI": "1.16.0",
+          "Microsoft.Extensions.AI": "10.8.3",
+          "Microsoft.Extensions.AI.Abstractions": "10.8.3",
+          "Microsoft.Extensions.AI.Evaluation": "10.7.0",
+          "Microsoft.Extensions.Compliance.Abstractions": "10.5.0",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.10",
+          "Microsoft.Extensions.FileSystemGlobbing": "10.0.6",
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.10",
+          "Microsoft.Extensions.VectorData.Abstractions": "10.7.0",
+          "Microsoft.ML.Tokenizers": "2.0.0"
+        },
+        "runtime": {
+          "lib/net10.0/Microsoft.Agents.AI.Harness.dll": {
+            "assemblyVersion": "1.16.0.0",
+            "fileVersion": "1.16.0.0"
+          }
+        }
+      },
+      "Microsoft.Agents.AI.Tools.Shell/1.16.0-preview.260730.1": {
+        "dependencies": {
+          "Microsoft.Agents.AI.Abstractions": "1.16.0",
+          "Microsoft.Extensions.AI": "10.8.3",
+          "Microsoft.Extensions.AI.Abstractions": "10.8.3",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.10",
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.10"
+        },
+        "runtime": {
+          "lib/net10.0/Microsoft.Agents.AI.Tools.Shell.dll": {
+            "assemblyVersion": "1.16.0.0",
+            "fileVersion": "1.16.0.0"
+          }
+        }
+      },
+      "Microsoft.Agents.AI.Workflows/1.16.0": {
+        "dependencies": {
+          "Microsoft.Agents.AI": "1.16.0",
+          "Microsoft.Agents.AI.Abstractions": "1.16.0",
+          "Microsoft.Extensions.AI": "10.8.3",
+          "Microsoft.Extensions.AI.Abstractions": "10.8.3",
+          "Microsoft.Extensions.AI.Evaluation": "10.7.0",
+          "Microsoft.Extensions.Compliance.Abstractions": "10.5.0",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.10",
+          "Microsoft.Extensions.FileSystemGlobbing": "10.0.6",
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.10",
+          "Microsoft.Extensions.VectorData.Abstractions": "10.7.0",
+          "Microsoft.ML.Tokenizers": "2.0.0",
+          "OpenTelemetry.Api": "1.15.3"
+        },
+        "runtime": {
+          "lib/net10.0/Microsoft.Agents.AI.Workflows.dll": {
+            "assemblyVersion": "1.16.0.0",
+            "fileVersion": "1.16.0.0"
+          }
+        }
+      },
+      "Microsoft.CodeAnalysis.Common/4.1.0": {
+        "runtime": {
+          "lib/netcoreapp3.1/Microsoft.CodeAnalysis.dll": {
+            "assemblyVersion": "4.1.0.0",
+            "fileVersion": "4.100.22.11411"
+          }
+        },
+        "resources": {
+          "lib/netcoreapp3.1/cs/Microsoft.CodeAnalysis.resources.dll": {
+            "locale": "cs"
+          },
+          "lib/netcoreapp3.1/de/Microsoft.CodeAnalysis.resources.dll": {
+            "locale": "de"
+          },
+          "lib/netcoreapp3.1/es/Microsoft.CodeAnalysis.resources.dll": {
+            "locale": "es"
+          },
+          "lib/netcoreapp3.1/fr/Microsoft.CodeAnalysis.resources.dll": {
+            "locale": "fr"
+          },
+          "lib/netcoreapp3.1/it/Microsoft.CodeAnalysis.resources.dll": {
+            "locale": "it"
+          },
+          "lib/netcoreapp3.1/ja/Microsoft.CodeAnalysis.resources.dll": {
+            "locale": "ja"
+          },
+          "lib/netcoreapp3.1/ko/Microsoft.CodeAnalysis.resources.dll": {
+            "locale": "ko"
+          },
+          "lib/netcoreapp3.1/pl/Microsoft.CodeAnalysis.resources.dll": {
+            "locale": "pl"
+          },
+          "lib/netcoreapp3.1/pt-BR/Microsoft.CodeAnalysis.resources.dll": {
+            "locale": "pt-BR"
+          },
+          "lib/netcoreapp3.1/ru/Microsoft.CodeAnalysis.resources.dll": {
+            "locale": "ru"
+          },
+          "lib/netcoreapp3.1/tr/Microsoft.CodeAnalysis.resources.dll": {
+            "locale": "tr"
+          },
+          "lib/netcoreapp3.1/zh-Hans/Microsoft.CodeAnalysis.resources.dll": {
+            "locale": "zh-Hans"
+          },
+          "lib/netcoreapp3.1/zh-Hant/Microsoft.CodeAnalysis.resources.dll": {
+            "locale": "zh-Hant"
+          }
+        }
+      },
+      "Microsoft.CodeAnalysis.CSharp/4.1.0": {
+        "dependencies": {
+          "Microsoft.CodeAnalysis.Common": "4.1.0"
+        },
+        "runtime": {
+          "lib/netcoreapp3.1/Microsoft.CodeAnalysis.CSharp.dll": {
+            "assemblyVersion": "4.1.0.0",
+            "fileVersion": "4.100.22.11411"
+          }
+        },
+        "resources": {
+          "lib/netcoreapp3.1/cs/Microsoft.CodeAnalysis.CSharp.resources.dll": {
+            "locale": "cs"
+          },
+          "lib/netcoreapp3.1/de/Microsoft.CodeAnalysis.CSharp.resources.dll": {
+            "locale": "de"
+          },
+          "lib/netcoreapp3.1/es/Microsoft.CodeAnalysis.CSharp.resources.dll": {
+            "locale": "es"
+          },
+          "lib/netcoreapp3.1/fr/Microsoft.CodeAnalysis.CSharp.resources.dll": {
+            "locale": "fr"
+          },
+          "lib/netcoreapp3.1/it/Microsoft.CodeAnalysis.CSharp.resources.dll": {
+            "locale": "it"
+          },
+          "lib/netcoreapp3.1/ja/Microsoft.CodeAnalysis.CSharp.resources.dll": {
+            "locale": "ja"
+          },
+          "lib/netcoreapp3.1/ko/Microsoft.CodeAnalysis.CSharp.resources.dll": {
+            "locale": "ko"
+          },
+          "lib/netcoreapp3.1/pl/Microsoft.CodeAnalysis.CSharp.resources.dll": {
+            "locale": "pl"
+          },
+          "lib/netcoreapp3.1/pt-BR/Microsoft.CodeAnalysis.CSharp.resources.dll": {
+            "locale": "pt-BR"
+          },
+          "lib/netcoreapp3.1/ru/Microsoft.CodeAnalysis.CSharp.resources.dll": {
+            "locale": "ru"
+          },
+          "lib/netcoreapp3.1/tr/Microsoft.CodeAnalysis.CSharp.resources.dll": {
+            "locale": "tr"
+          },
+          "lib/netcoreapp3.1/zh-Hans/Microsoft.CodeAnalysis.CSharp.resources.dll": {
+            "locale": "zh-Hans"
+          },
+          "lib/netcoreapp3.1/zh-Hant/Microsoft.CodeAnalysis.CSharp.resources.dll": {
+            "locale": "zh-Hant"
+          }
+        }
+      },
+      "Microsoft.Data.Sqlite/10.0.10": {
+        "dependencies": {
+          "Microsoft.Data.Sqlite.Core": "10.0.10",
+          "SQLitePCLRaw.bundle_e_sqlite3": "2.1.12",
+          "SQLitePCLRaw.core": "2.1.12"
+        }
+      },
+      "Microsoft.Data.Sqlite.Core/10.0.10": {
+        "dependencies": {
+          "SQLitePCLRaw.core": "2.1.12"
+        },
+        "runtime": {
+          "lib/net8.0/Microsoft.Data.Sqlite.dll": {
+            "assemblyVersion": "10.0.10.0",
+            "fileVersion": "10.0.1026.32716"
+          }
+        }
+      },
+      "Microsoft.Extensions.AI/10.8.3": {
+        "dependencies": {
+          "Microsoft.Extensions.AI.Abstractions": "10.8.3",
+          "Microsoft.Extensions.Caching.Abstractions": "10.0.10",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.10",
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.10",
+          "System.Numerics.Tensors": "10.0.10"
+        },
+        "runtime": {
+          "lib/net10.0/Microsoft.Extensions.AI.dll": {
+            "assemblyVersion": "10.8.0.0",
+            "fileVersion": "10.800.326.37702"
+          }
+        }
+      },
+      "Microsoft.Extensions.AI.Abstractions/10.8.3": {
+        "runtime": {
+          "lib/net10.0/Microsoft.Extensions.AI.Abstractions.dll": {
+            "assemblyVersion": "10.8.0.0",
+            "fileVersion": "10.800.326.37702"
+          }
+        }
+      },
+      "Microsoft.Extensions.AI.Evaluation/10.7.0": {
+        "dependencies": {
+          "Microsoft.Extensions.AI.Abstractions": "10.8.3"
+        },
+        "runtime": {
+          "lib/net10.0/Microsoft.Extensions.AI.Evaluation.dll": {
+            "assemblyVersion": "10.7.0.0",
+            "fileVersion": "10.700.26.30905"
+          }
+        }
+      },
+      "Microsoft.Extensions.AI.OpenAI/10.8.3": {
+        "dependencies": {
+          "Microsoft.Extensions.AI.Abstractions": "10.8.3",
+          "OpenAI": "2.12.0"
+        },
+        "runtime": {
+          "lib/net10.0/Microsoft.Extensions.AI.OpenAI.dll": {
+            "assemblyVersion": "10.8.0.0",
+            "fileVersion": "10.800.326.37702"
+          }
+        }
+      },
+      "Microsoft.Extensions.Caching.Abstractions/10.0.10": {
+        "dependencies": {
+          "Microsoft.Extensions.Primitives": "10.0.10"
+        },
+        "runtime": {
+          "lib/net10.0/Microsoft.Extensions.Caching.Abstractions.dll": {
+            "assemblyVersion": "10.0.0.0",
+            "fileVersion": "10.0.1026.32716"
+          }
+        }
+      },
+      "Microsoft.Extensions.Compliance.Abstractions/10.5.0": {
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.10",
+          "Microsoft.Extensions.ObjectPool": "10.0.6"
+        },
+        "runtime": {
+          "lib/net10.0/Microsoft.Extensions.Compliance.Abstractions.dll": {
+            "assemblyVersion": "10.5.0.0",
+            "fileVersion": "10.500.26.21304"
+          }
+        }
+      },
+      "Microsoft.Extensions.Configuration.Abstractions/10.0.3": {
+        "dependencies": {
+          "Microsoft.Extensions.Primitives": "10.0.10"
+        },
+        "runtime": {
+          "lib/net10.0/Microsoft.Extensions.Configuration.Abstractions.dll": {
+            "assemblyVersion": "10.0.0.0",
+            "fileVersion": "10.0.326.7603"
+          }
+        }
+      },
+      "Microsoft.Extensions.DependencyInjection.Abstractions/10.0.10": {
+        "runtime": {
+          "lib/net10.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll": {
+            "assemblyVersion": "10.0.0.0",
+            "fileVersion": "10.0.1026.32716"
+          }
+        }
+      },
+      "Microsoft.Extensions.Diagnostics.Abstractions/10.0.3": {
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.10",
+          "Microsoft.Extensions.Options": "10.0.3"
+        },
+        "runtime": {
+          "lib/net10.0/Microsoft.Extensions.Diagnostics.Abstractions.dll": {
+            "assemblyVersion": "10.0.0.0",
+            "fileVersion": "10.0.326.7603"
+          }
+        }
+      },
+      "Microsoft.Extensions.FileProviders.Abstractions/10.0.3": {
+        "dependencies": {
+          "Microsoft.Extensions.Primitives": "10.0.10"
+        },
+        "runtime": {
+          "lib/net10.0/Microsoft.Extensions.FileProviders.Abstractions.dll": {
+            "assemblyVersion": "10.0.0.0",
+            "fileVersion": "10.0.326.7603"
+          }
+        }
+      },
+      "Microsoft.Extensions.FileSystemGlobbing/10.0.6": {
+        "runtime": {
+          "lib/net10.0/Microsoft.Extensions.FileSystemGlobbing.dll": {
+            "assemblyVersion": "10.0.0.0",
+            "fileVersion": "10.0.626.17701"
+          }
+        }
+      },
+      "Microsoft.Extensions.Hosting.Abstractions/10.0.3": {
+        "dependencies": {
+          "Microsoft.Extensions.Configuration.Abstractions": "10.0.3",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.10",
+          "Microsoft.Extensions.Diagnostics.Abstractions": "10.0.3",
+          "Microsoft.Extensions.FileProviders.Abstractions": "10.0.3",
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.10"
+        },
+        "runtime": {
+          "lib/net10.0/Microsoft.Extensions.Hosting.Abstractions.dll": {
+            "assemblyVersion": "10.0.0.0",
+            "fileVersion": "10.0.326.7603"
+          }
+        }
+      },
+      "Microsoft.Extensions.Logging.Abstractions/10.0.10": {
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.10"
+        },
+        "runtime": {
+          "lib/net10.0/Microsoft.Extensions.Logging.Abstractions.dll": {
+            "assemblyVersion": "10.0.0.0",
+            "fileVersion": "10.0.1026.32716"
+          }
+        }
+      },
+      "Microsoft.Extensions.ObjectPool/10.0.6": {
+        "runtime": {
+          "lib/net10.0/Microsoft.Extensions.ObjectPool.dll": {
+            "assemblyVersion": "10.0.0.0",
+            "fileVersion": "10.0.626.17701"
+          }
+        }
+      },
+      "Microsoft.Extensions.Options/10.0.3": {
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.10",
+          "Microsoft.Extensions.Primitives": "10.0.10"
+        },
+        "runtime": {
+          "lib/net10.0/Microsoft.Extensions.Options.dll": {
+            "assemblyVersion": "10.0.0.0",
+            "fileVersion": "10.0.326.7603"
+          }
+        }
+      },
+      "Microsoft.Extensions.Primitives/10.0.10": {
+        "runtime": {
+          "lib/net10.0/Microsoft.Extensions.Primitives.dll": {
+            "assemblyVersion": "10.0.0.0",
+            "fileVersion": "10.0.1026.32716"
+          }
+        }
+      },
+      "Microsoft.Extensions.VectorData.Abstractions/10.7.0": {
+        "dependencies": {
+          "Microsoft.Extensions.AI.Abstractions": "10.8.3"
+        },
+        "runtime": {
+          "lib/net10.0/Microsoft.Extensions.VectorData.Abstractions.dll": {
+            "assemblyVersion": "10.7.0.0",
+            "fileVersion": "10.700.26.30905"
+          }
+        }
+      },
+      "Microsoft.JavaScript.NodeApi/0.9.26": {
+        "runtime": {
+          "lib/net10.0/Microsoft.JavaScript.NodeApi.dll": {
+            "assemblyVersion": "0.9.0.0",
+            "fileVersion": "0.9.26.29850"
+          }
+        }
+      },
+      "Microsoft.JavaScript.NodeApi.Generator/0.9.26": {
+        "dependencies": {
+          "Microsoft.CodeAnalysis.CSharp": "4.1.0",
+          "System.Reflection.MetadataLoadContext": "6.0.0"
+        },
+        "runtime": {
+          "lib/net10.0/Microsoft.JavaScript.NodeApi.Generator.dll": {
+            "assemblyVersion": "0.9.0.0",
+            "fileVersion": "0.9.26.29850"
+          }
+        }
+      },
+      "Microsoft.ML.Tokenizers/2.0.0": {
+        "dependencies": {
+          "Google.Protobuf": "3.30.2"
+        },
+        "runtime": {
+          "lib/net8.0/Microsoft.ML.Tokenizers.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "2.0.25.55704"
+          }
+        }
+      },
+      "OpenAI/2.12.0": {
+        "dependencies": {
+          "System.ClientModel": "1.14.0"
+        },
+        "runtime": {
+          "lib/net10.0/OpenAI.dll": {
+            "assemblyVersion": "2.12.0.0",
+            "fileVersion": "2.12.0.0"
+          }
+        }
+      },
+      "OpenTelemetry.Api/1.15.3": {
+        "runtime": {
+          "lib/net10.0/OpenTelemetry.Api.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.15.3.2017"
+          }
+        }
+      },
+      "Spectre.Console/0.57.2": {
+        "dependencies": {
+          "Spectre.Console.Ansi": "0.57.2"
+        },
+        "runtime": {
+          "lib/net10.0/Spectre.Console.dll": {
+            "assemblyVersion": "0.0.0.0",
+            "fileVersion": "0.57.2.0"
+          }
+        }
+      },
+      "Spectre.Console.Ansi/0.57.2": {
+        "runtime": {
+          "lib/net10.0/Spectre.Console.Ansi.dll": {
+            "assemblyVersion": "0.0.0.0",
+            "fileVersion": "0.57.2.0"
+          }
+        }
+      },
+      "SQLitePCLRaw.bundle_e_sqlite3/2.1.12": {
+        "dependencies": {
+          "SQLitePCLRaw.lib.e_sqlite3": "2.1.12",
+          "SQLitePCLRaw.provider.e_sqlite3": "2.1.12"
+        },
+        "runtime": {
+          "lib/netstandard2.0/SQLitePCLRaw.batteries_v2.dll": {
+            "assemblyVersion": "2.1.12.3116",
+            "fileVersion": "2.1.12.3116"
+          }
+        }
+      },
+      "SQLitePCLRaw.core/2.1.12": {
+        "runtime": {
+          "lib/netstandard2.0/SQLitePCLRaw.core.dll": {
+            "assemblyVersion": "2.1.12.3116",
+            "fileVersion": "2.1.12.3116"
+          }
+        }
+      },
+      "SQLitePCLRaw.lib.e_sqlite3/2.1.12": {
+        "native": {
+          "runtimes/osx-arm64/native/libe_sqlite3.dylib": {
+            "fileVersion": "0.0.0.0"
+          }
+        }
+      },
+      "SQLitePCLRaw.provider.e_sqlite3/2.1.12": {
+        "dependencies": {
+          "SQLitePCLRaw.core": "2.1.12"
+        },
+        "runtime": {
+          "lib/net6.0/SQLitePCLRaw.provider.e_sqlite3.dll": {
+            "assemblyVersion": "2.1.12.3116",
+            "fileVersion": "2.1.12.3116"
+          }
+        }
+      },
+      "System.ClientModel/1.14.0": {
+        "dependencies": {
+          "Microsoft.Extensions.Configuration.Abstractions": "10.0.3",
+          "Microsoft.Extensions.Hosting.Abstractions": "10.0.3",
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.10",
+          "System.Memory.Data": "10.0.3"
+        },
+        "runtime": {
+          "lib/net10.0/System.ClientModel.dll": {
+            "assemblyVersion": "1.14.0.0",
+            "fileVersion": "1.1400.26.30307"
+          }
+        }
+      },
+      "System.Memory.Data/10.0.3": {
+        "runtime": {
+          "lib/net10.0/System.Memory.Data.dll": {
+            "assemblyVersion": "10.0.0.3",
+            "fileVersion": "10.0.326.7603"
+          }
+        }
+      },
+      "System.Numerics.Tensors/10.0.10": {
+        "runtime": {
+          "lib/net10.0/System.Numerics.Tensors.dll": {
+            "assemblyVersion": "10.0.0.10",
+            "fileVersion": "10.0.1026.32716"
+          }
+        }
+      },
+      "System.Reflection.MetadataLoadContext/6.0.0": {
+        "runtime": {
+          "lib/net6.0/System.Reflection.MetadataLoadContext.dll": {
+            "assemblyVersion": "6.0.0.0",
+            "fileVersion": "6.0.21.52210"
+          }
+        }
+      },
+      "Tavily/1.0.1": {
+        "dependencies": {
+          "Microsoft.Extensions.AI": "10.8.3"
+        },
+        "runtime": {
+          "lib/net10.0/Tavily.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.1.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Tandem.NodeApiSpike.Bridge/0.1.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "FluentValidation/12.1.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-EPpkIe1yh1a0OXyC100oOA8WMbZvqUu5plwhvYcb7oSELfyUZzfxV48BLhvs3kKo4NwG7MGLNgy1RJiYtT8Dpw==",
+      "path": "fluentvalidation/12.1.1",
+      "hashPath": "fluentvalidation.12.1.1.nupkg.sha512"
+    },
+    "Google.Protobuf/3.30.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-Y2aOVLIt75yeeEWigg9V9YnjsEm53sADtLGq0gLhwaXpk3iu8tYSoauolyhenagA2sWno2TQ2WujI0HQd6s1Vw==",
+      "path": "google.protobuf/3.30.2",
+      "hashPath": "google.protobuf.3.30.2.nupkg.sha512"
+    },
+    "Humanizer.Core/3.0.10": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-yZIhtw8sYuvsONzQbZxWpR60tMWYHXoo0DL6nyOqSFiU5POjBTSEyWFpTQtJEZuy+oqiYTXKXY/Mjx7KnqIQFw==",
+      "path": "humanizer.core/3.0.10",
+      "hashPath": "humanizer.core.3.0.10.nupkg.sha512"
+    },
+    "Json.More.Net/3.0.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-fRctF2J2SILYG6wqP21drmeEODmCVkVQ/b3MndDu2fT1swfySyUgq7ePCk+aENGlDcIm05fyfjh9vcuqDEfv3w==",
+      "path": "json.more.net/3.0.1",
+      "hashPath": "json.more.net.3.0.1.nupkg.sha512"
+    },
+    "JsonPointer.Net/7.0.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-oClYHv2ooeRrtPZyC9sb/Za/ie5pGhjTbNHlAyFg4XOCyU+606FdoZKS7UdaWvtsPlrF+U2w0Ja3TRvn5+spyA==",
+      "path": "jsonpointer.net/7.0.2",
+      "hashPath": "jsonpointer.net.7.0.2.nupkg.sha512"
+    },
+    "JsonSchema.Net/9.4.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-muE4nPuzbD9x5XA1mkXJNqX4mhz47oF3EY8qFLY1pyUY7lhXFKq65t/dSKIHeNSLBV17zwZuq24MD1em90rMNg==",
+      "path": "jsonschema.net/9.4.0",
+      "hashPath": "jsonschema.net.9.4.0.nupkg.sha512"
+    },
+    "JsonSchema.Net.Generation/7.3.11": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-ANV07AP26QlI4eN2pF2rnKqNvVOtJ0GkA/V9/FwoVAh+icPMKp2QrenR4cz9rO6MiH0fGfZVc0+QH0QP4wjNcQ==",
+      "path": "jsonschema.net.generation/7.3.11",
+      "hashPath": "jsonschema.net.generation.7.3.11.nupkg.sha512"
+    },
+    "Meridian.Tandem/0.1.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-qtSgutRiEIRCfrROcfRX9g40dQynljY5veWPVuvgFjVKSxbcN9SkSaiXJoJhsFJhFFcMpHTiJrvi9EPzw1NMhw==",
+      "path": "meridian.tandem/0.1.0",
+      "hashPath": "meridian.tandem.0.1.0.nupkg.sha512"
+    },
+    "Meridian.Tandem.Advanced/0.1.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-G4PRnXpctNuDus/KHbTqCtVH0PxfllMjqggmtHPbqp4ioGp1y8C8c6IRCDiKqek/+Pd2CIeLKM8CctXOwNcF8g==",
+      "path": "meridian.tandem.advanced/0.1.0",
+      "hashPath": "meridian.tandem.advanced.0.1.0.nupkg.sha512"
+    },
+    "Meridian.Tandem.Ledger/0.1.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-roZ0Tvc03VbEpXYVumLbMNekf+AJiPenyZDBqPOD4BeUMzbPKrBIxjJDctaTBgKEXZCpTsEOT5vi3/r4qnQM6w==",
+      "path": "meridian.tandem.ledger/0.1.0",
+      "hashPath": "meridian.tandem.ledger.0.1.0.nupkg.sha512"
+    },
+    "Meridian.Tandem.OpenAICompatible/0.1.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-QM7vTARopgEox96JazcFFX8GKUodv4KDe1DA0sJDK6FUWpdKZAwuIxeUkhirrDGz8xiCRic4RFjI9v1/6aej4w==",
+      "path": "meridian.tandem.openaicompatible/0.1.0",
+      "hashPath": "meridian.tandem.openaicompatible.0.1.0.nupkg.sha512"
+    },
+    "Meridian.Tandem.Terminal/0.1.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-woAt4rFhNP0VBbuB9obck/RhBqGGjd/KotmhysAPyNcwvPvjZfDmZW/haXIhtulCwJH3z7OJsDgaVWZJPdekrA==",
+      "path": "meridian.tandem.terminal/0.1.0",
+      "hashPath": "meridian.tandem.terminal.0.1.0.nupkg.sha512"
+    },
+    "Microsoft.Agents.AI/1.16.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-TTyxM/+gAaKWwadxzY2FqY/8baWBzuSWwwH9L9FgkQQ2awsG+yhZjzzIwBgqozAnTPLPTA59h+mDObG1miuINw==",
+      "path": "microsoft.agents.ai/1.16.0",
+      "hashPath": "microsoft.agents.ai.1.16.0.nupkg.sha512"
+    },
+    "Microsoft.Agents.AI.Abstractions/1.16.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-7PuWDH7rICvt1qjAQAZLFmWv6fUXQDL6zhGPFQh/hQRyM7wWKm84evpYKQBaBNJ2O6d+w6ceoFmXmddMoIgD8w==",
+      "path": "microsoft.agents.ai.abstractions/1.16.0",
+      "hashPath": "microsoft.agents.ai.abstractions.1.16.0.nupkg.sha512"
+    },
+    "Microsoft.Agents.AI.Harness/1.16.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-yDuyRauhBCAmvL39p8JRYT16sMTMPYRXHbN/iyUgl881Btryuk4PhxCPEmOp0A6XVK4AAa59je5I1BjORyb8dg==",
+      "path": "microsoft.agents.ai.harness/1.16.0",
+      "hashPath": "microsoft.agents.ai.harness.1.16.0.nupkg.sha512"
+    },
+    "Microsoft.Agents.AI.Tools.Shell/1.16.0-preview.260730.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-fgtUBO98mtiTDDenR07E1wBl3YhLraPLGNDmIA0ccog2upwpzuiG+P05eJHA0KLK3M/Ri8oABrOB0N6qcRJBqw==",
+      "path": "microsoft.agents.ai.tools.shell/1.16.0-preview.260730.1",
+      "hashPath": "microsoft.agents.ai.tools.shell.1.16.0-preview.260730.1.nupkg.sha512"
+    },
+    "Microsoft.Agents.AI.Workflows/1.16.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-fNI6JjqARcdZqeuAXa18ucryjVO7c7haC9FLJVs9pjdjxdhTxCWMxbswddMQBwno/iv/6BKwBMBpbUQETcHrHg==",
+      "path": "microsoft.agents.ai.workflows/1.16.0",
+      "hashPath": "microsoft.agents.ai.workflows.1.16.0.nupkg.sha512"
+    },
+    "Microsoft.CodeAnalysis.Common/4.1.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-bNzTyxP3iD5FPFHfVDl15Y6/wSoI7e3MeV0lOaj9igbIKTjgrmuw6LoVJ06jUNFA7+KaDC/OIsStWl/FQJz6sQ==",
+      "path": "microsoft.codeanalysis.common/4.1.0",
+      "hashPath": "microsoft.codeanalysis.common.4.1.0.nupkg.sha512"
+    },
+    "Microsoft.CodeAnalysis.CSharp/4.1.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-sbu6kDGzo9bfQxuqWpeEE7I9P30bSuZEnpDz9/qz20OU6pm79Z63+/BsAzO2e/R/Q97kBrpj647wokZnEVr97w==",
+      "path": "microsoft.codeanalysis.csharp/4.1.0",
+      "hashPath": "microsoft.codeanalysis.csharp.4.1.0.nupkg.sha512"
+    },
+    "Microsoft.Data.Sqlite/10.0.10": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-58JwZ39lCvRXHfV5O6RQfbHEDu8ZsXI7weRoVRR4jrGRxxkS+qyeuGrN2xD+9VYEICApYr0iTSL6PuU+DdsvPg==",
+      "path": "microsoft.data.sqlite/10.0.10",
+      "hashPath": "microsoft.data.sqlite.10.0.10.nupkg.sha512"
+    },
+    "Microsoft.Data.Sqlite.Core/10.0.10": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-TPCs0ldm7AWqcKmp6f/Xr+14sat7hx4rHfRlS4RgCURBH2thEWbAKEyX7cCWr63zVJVOJIJZTg2cBiUXa8ys6g==",
+      "path": "microsoft.data.sqlite.core/10.0.10",
+      "hashPath": "microsoft.data.sqlite.core.10.0.10.nupkg.sha512"
+    },
+    "Microsoft.Extensions.AI/10.8.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-VdT9SiqiqmrhsVx//xnfyaaNPuMbo6+vOLm8D/EvtkZfQFpBzPyaJG7W1gFpTJQoQ4nN4k0J9j+NzpScGeEZUQ==",
+      "path": "microsoft.extensions.ai/10.8.3",
+      "hashPath": "microsoft.extensions.ai.10.8.3.nupkg.sha512"
+    },
+    "Microsoft.Extensions.AI.Abstractions/10.8.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-K0B05oApxmviWalNHPMBBcRC7erKiDATz3ENNR/jqTR9JwIwLRefgDhj2jCRwL1aca99pXUe0qyQC73/xIuZig==",
+      "path": "microsoft.extensions.ai.abstractions/10.8.3",
+      "hashPath": "microsoft.extensions.ai.abstractions.10.8.3.nupkg.sha512"
+    },
+    "Microsoft.Extensions.AI.Evaluation/10.7.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-BdbJNfhc/pb3RkD19Sm/XuLK3x5AdU+AB+0HC8Nlu7WZTrVLnA8lpqIx1BB4k+KIKy5ZSH5RVH5HHfT+gwL9yg==",
+      "path": "microsoft.extensions.ai.evaluation/10.7.0",
+      "hashPath": "microsoft.extensions.ai.evaluation.10.7.0.nupkg.sha512"
+    },
+    "Microsoft.Extensions.AI.OpenAI/10.8.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-hMKfy4WzLoDNugWBkQhRBIi95CvboLiKTUueEMjtNSykrw00NLuPJ8cqmpB8DRO8yZCDgI7a3xLjYQhLkkkoWA==",
+      "path": "microsoft.extensions.ai.openai/10.8.3",
+      "hashPath": "microsoft.extensions.ai.openai.10.8.3.nupkg.sha512"
+    },
+    "Microsoft.Extensions.Caching.Abstractions/10.0.10": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-4ZFBNE+jzR+CrWWlhOesnmywCW7pYKT0dxyAQRdL11yJwxe4jvcAu31eorFtEkoFeCDcUTeNssgPv2yaRRptaQ==",
+      "path": "microsoft.extensions.caching.abstractions/10.0.10",
+      "hashPath": "microsoft.extensions.caching.abstractions.10.0.10.nupkg.sha512"
+    },
+    "Microsoft.Extensions.Compliance.Abstractions/10.5.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-xbWZji13Vb2jDJNtwVrKpI09jd8x3n3fL+GzhiLK+8O5Wc2A+GyqCZalST2fV46Pf0QfCwkXf83y+3/rDkCd7A==",
+      "path": "microsoft.extensions.compliance.abstractions/10.5.0",
+      "hashPath": "microsoft.extensions.compliance.abstractions.10.5.0.nupkg.sha512"
+    },
+    "Microsoft.Extensions.Configuration.Abstractions/10.0.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-xVDHL0+SIgemfh95fTO9cGLe17TWv/ZP0n7m01z8X6pzt2DmQpucioWR/mYZA1sRlkWnkXzfl0JweLNWmE9WMg==",
+      "path": "microsoft.extensions.configuration.abstractions/10.0.3",
+      "hashPath": "microsoft.extensions.configuration.abstractions.10.0.3.nupkg.sha512"
+    },
+    "Microsoft.Extensions.DependencyInjection.Abstractions/10.0.10": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-z/2xXlFw2aLGjHyEm6E0tQ+In6VfzQzTrtArbQ2c0TQE16ZbyDCMGPvaUT9I0s8rgy9sRWlU2P9waW37qV04qA==",
+      "path": "microsoft.extensions.dependencyinjection.abstractions/10.0.10",
+      "hashPath": "microsoft.extensions.dependencyinjection.abstractions.10.0.10.nupkg.sha512"
+    },
+    "Microsoft.Extensions.Diagnostics.Abstractions/10.0.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-mQiTzAj7PIJ2A9YXR5QhgulS1fTWhmQc3ckd1Mrf3hKW07d03fBDqx8vVaFw+cRTebDOeB6pNqdWdnRxsi1hBA==",
+      "path": "microsoft.extensions.diagnostics.abstractions/10.0.3",
+      "hashPath": "microsoft.extensions.diagnostics.abstractions.10.0.3.nupkg.sha512"
+    },
+    "Microsoft.Extensions.FileProviders.Abstractions/10.0.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-4TD9AXDRsipTmaemwnjt/DM5Ri0de2JzHQhvZ4woBTjUtL4XrPNsMrOk5oiLJAx1gTrE6pOIhxv+lEde5F6CZA==",
+      "path": "microsoft.extensions.fileproviders.abstractions/10.0.3",
+      "hashPath": "microsoft.extensions.fileproviders.abstractions.10.0.3.nupkg.sha512"
+    },
+    "Microsoft.Extensions.FileSystemGlobbing/10.0.6": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-EG9GuYJlj1o1G8maSpKceZdj88OehKFRWaWp8BWUQWlvIJDWD8N0sIYDoRMGL/yX85H8KbVYPR9+dH/UjPEiKw==",
+      "path": "microsoft.extensions.filesystemglobbing/10.0.6",
+      "hashPath": "microsoft.extensions.filesystemglobbing.10.0.6.nupkg.sha512"
+    },
+    "Microsoft.Extensions.Hosting.Abstractions/10.0.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-GdMpC10Jf6poxSvUJ4lgYpJ5F/kJeaAoJmrPufjBoPYyCTKKY5Dyl0rZA+LBNvFqTq1cZa/lhlptlUhNvU6xrg==",
+      "path": "microsoft.extensions.hosting.abstractions/10.0.3",
+      "hashPath": "microsoft.extensions.hosting.abstractions.10.0.3.nupkg.sha512"
+    },
+    "Microsoft.Extensions.Logging.Abstractions/10.0.10": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-zkFxGYUvdxAvIKTyXHrmW+Sux53D4SezD9dMyZ6hrwwzPQJNuwCRy1f5W7AvYTqacEGhWF2XderRQG1OvbV8og==",
+      "path": "microsoft.extensions.logging.abstractions/10.0.10",
+      "hashPath": "microsoft.extensions.logging.abstractions.10.0.10.nupkg.sha512"
+    },
+    "Microsoft.Extensions.ObjectPool/10.0.6": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-2Jafd4fdxxiwiQ08mcF+Lf3vqikkQZusGVThOKZNSmPDceGk4IwkjeHL7OEb9Ov8q9ICY5wofL98CS153K5VvQ==",
+      "path": "microsoft.extensions.objectpool/10.0.6",
+      "hashPath": "microsoft.extensions.objectpool.10.0.6.nupkg.sha512"
+    },
+    "Microsoft.Extensions.Options/10.0.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-hU6WzGTPvPoLA2ng1ILvWQb3g0qORdlHNsxI8IcPLumJb3suimYUl+bbDzdo1V4KFsvVhnMWzysHpKbZaoDQPQ==",
+      "path": "microsoft.extensions.options/10.0.3",
+      "hashPath": "microsoft.extensions.options.10.0.3.nupkg.sha512"
+    },
+    "Microsoft.Extensions.Primitives/10.0.10": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-5wu/GrYVd8mG2DVUw3vFJzF+O336TyTGg/Kmcgw9bfwYhCoFiV5lR5QeEmKecJyrW4W54nMfD3p3589E8a7czQ==",
+      "path": "microsoft.extensions.primitives/10.0.10",
+      "hashPath": "microsoft.extensions.primitives.10.0.10.nupkg.sha512"
+    },
+    "Microsoft.Extensions.VectorData.Abstractions/10.7.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-eh0JLxoztc9Wz7TrFVRQyotMY9CBh2t22lMPvzy61yaBDDFBsrisrFOD4NId2z/ujwsHVKDtyfDb9tkXwSV5Vw==",
+      "path": "microsoft.extensions.vectordata.abstractions/10.7.0",
+      "hashPath": "microsoft.extensions.vectordata.abstractions.10.7.0.nupkg.sha512"
+    },
+    "Microsoft.JavaScript.NodeApi/0.9.26": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-ukxBDlMi8o6BmpExZal0NqEY4fYymJXu8h3AFu9nv9gXl9FCLvqwwtQ1DSAvKqwKLi99lEqfNHnCskqJsqpbNw==",
+      "path": "microsoft.javascript.nodeapi/0.9.26",
+      "hashPath": "microsoft.javascript.nodeapi.0.9.26.nupkg.sha512"
+    },
+    "Microsoft.JavaScript.NodeApi.Generator/0.9.26": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-U5fd2aoVSwzUHcHho1Wp1Aa9nauNqctqNoOeKr3Ftm4lvO0tri35yEIq8hHNkQ299+B07woyRNdeDLB99JL5Rg==",
+      "path": "microsoft.javascript.nodeapi.generator/0.9.26",
+      "hashPath": "microsoft.javascript.nodeapi.generator.0.9.26.nupkg.sha512"
+    },
+    "Microsoft.ML.Tokenizers/2.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-+b8lT4cLLO/sBR2hjvE/qG6qrZG15h7/PBvnIrzTh4xDaAxdHUY6449rC+1pHzQUsBiCHZVbj+VMn+xS0sL7TA==",
+      "path": "microsoft.ml.tokenizers/2.0.0",
+      "hashPath": "microsoft.ml.tokenizers.2.0.0.nupkg.sha512"
+    },
+    "OpenAI/2.12.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-rKyVV0sJPo7pn0Ya5dgRs5ggGbjvnKcYSvYV2jITKgFIfeo2XHjgyi6UqNT/OnF0YBqjsNpPdgM6QjzYczWplg==",
+      "path": "openai/2.12.0",
+      "hashPath": "openai.2.12.0.nupkg.sha512"
+    },
+    "OpenTelemetry.Api/1.15.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-fX+fkCysfPut+qCcT3bKqyX4QN9Saf4CgX8HLOHywEVD+Xr7sULtfuypITpoDysjx8R59dn/3mWhgimMH8cm/g==",
+      "path": "opentelemetry.api/1.15.3",
+      "hashPath": "opentelemetry.api.1.15.3.nupkg.sha512"
+    },
+    "Spectre.Console/0.57.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-wzsB+P9i6F9G+cFOJxRotCiQWNSzZVAMxi8YMiHlGXXU1JLMXGp7zSSqBMmROZS2bzpK5jk+Saa7Evp8HwqhKg==",
+      "path": "spectre.console/0.57.2",
+      "hashPath": "spectre.console.0.57.2.nupkg.sha512"
+    },
+    "Spectre.Console.Ansi/0.57.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-Y1+u73shwP+JYHmrkdN6bSt2kaGBEAafhi2nrecczbXdFRey+k7J/WF9YPfcB0rqivv2S8fmif6FSBq9m/AFvw==",
+      "path": "spectre.console.ansi/0.57.2",
+      "hashPath": "spectre.console.ansi.0.57.2.nupkg.sha512"
+    },
+    "SQLitePCLRaw.bundle_e_sqlite3/2.1.12": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-mAgscpQMLw5/nfA1Q5oJVAT29yROUo1ifZGbbTpx/lwZpSxMUGoYbKfmvdm8oXER+RzxqBmmQzeBEVKfeHv2nw==",
+      "path": "sqlitepclraw.bundle_e_sqlite3/2.1.12",
+      "hashPath": "sqlitepclraw.bundle_e_sqlite3.2.1.12.nupkg.sha512"
+    },
+    "SQLitePCLRaw.core/2.1.12": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-ETpNw9DY3ckWLgRRAeCHj+GKOuPi61aeczkXhgHexUvqoZBAYg8RYESE2J7O1M7+o6QbdSEZwrw9bfqztUVWXg==",
+      "path": "sqlitepclraw.core/2.1.12",
+      "hashPath": "sqlitepclraw.core.2.1.12.nupkg.sha512"
+    },
+    "SQLitePCLRaw.lib.e_sqlite3/2.1.12": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-fWi8Dbknuhgg72fWinIdjXVaqO1hHL4YBBwVLnr7e1c9TAZwJ0QE38j9syW1hwx6HaqEVTwI+O07WPdZn8Rp0w==",
+      "path": "sqlitepclraw.lib.e_sqlite3/2.1.12",
+      "hashPath": "sqlitepclraw.lib.e_sqlite3.2.1.12.nupkg.sha512"
+    },
+    "SQLitePCLRaw.provider.e_sqlite3/2.1.12": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-W3oH4XIfCzFrgUSDKHhN6N+dgzA5YHOR2VxX8GB6Qy7CyrJJgxPEG8NirgYWlPQC5P2jz2knSsexWu4tDUL33g==",
+      "path": "sqlitepclraw.provider.e_sqlite3/2.1.12",
+      "hashPath": "sqlitepclraw.provider.e_sqlite3.2.1.12.nupkg.sha512"
+    },
+    "System.ClientModel/1.14.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-yhIJHDW3Hh5kcvhHv3ww1T8qvya06Nlwo/SR/rke4/fHXtyKiqQV/9b/VDhnVI7QUcMnpfvh4pIEFhNsTDLeKQ==",
+      "path": "system.clientmodel/1.14.0",
+      "hashPath": "system.clientmodel.1.14.0.nupkg.sha512"
+    },
+    "System.Memory.Data/10.0.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-MaGhRfGunmrj/nHjtsi9XkhlYJ/ERGWrbA+BiSKNtGnAjc9XlG5EhAvak6VRcX5LYzPF6pBO8nJ613dTgzabig==",
+      "path": "system.memory.data/10.0.3",
+      "hashPath": "system.memory.data.10.0.3.nupkg.sha512"
+    },
+    "System.Numerics.Tensors/10.0.10": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-9Ildb4Y9maDztB0ZRGxsNShbpCQ2Tjv2dr4IjskBxpTGhH7aIz1+oC+Hl833ASs/htWwsH6myNe+sRpeyCzeMQ==",
+      "path": "system.numerics.tensors/10.0.10",
+      "hashPath": "system.numerics.tensors.10.0.10.nupkg.sha512"
+    },
+    "System.Reflection.MetadataLoadContext/6.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-SuK8qTHbmG3PToLo1TEq8YSfY31FiKhASBmjozUTAleDgiX4H2X4jm0VPFb+K2soSSmYPyHTpHp35TctfNtDzQ==",
+      "path": "system.reflection.metadataloadcontext/6.0.0",
+      "hashPath": "system.reflection.metadataloadcontext.6.0.0.nupkg.sha512"
+    },
+    "Tavily/1.0.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-WI1vRoVkNzeGU1ZMiccBI6hvGjzJWQlJJDOAuk7bUvZ6SpDBFvOHieGbTe6OnBl7H1+0hhQflbcV0YqNMtAtBw==",
+      "path": "tavily/1.0.1",
+      "hashPath": "tavily.1.0.1.nupkg.sha512"
+    }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "name": "@maxanstey-meridian/tandem",
+  "version": "0.1.0",
+  "description": "TypeScript authoring API for Tandem agentic pipelines",
+  "homepage": "https://github.com/maxanstey-meridian/tandem-ts#readme",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maxanstey-meridian/tandem-ts.git"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./cli": {
+      "types": "./dist/cli.d.ts",
+      "import": "./dist/cli.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "prepare": "node scripts/prepare.mjs",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test --test-concurrency=1 tests/*.test.mjs"
+  },
+  "dependencies": {
+    "node-api-dotnet": "0.9.26"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "zod": "^4.3.6"
+  },
+  "peerDependencies": {
+    "zod": "^4.3.6"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
