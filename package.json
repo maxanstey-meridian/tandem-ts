@@ -35,6 +35,7 @@
     "test": "node --import tsx --test --test-concurrency=1 tests/*.test.mjs"
   },
   "dependencies": {
+    "@types/node": "^24.10.1",
     "node-api-dotnet": "0.9.26",
     "typescript": "^5.9.3"
   },
