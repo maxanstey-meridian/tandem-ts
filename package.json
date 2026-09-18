@@ -29,8 +29,8 @@
     "access": "public"
   },
   "scripts": {
-    "postinstall": "node scripts/install-runtime.mjs && tsc -p tsconfig.json",
-    "build": "tsc -p tsconfig.json",
+    "postinstall": "node scripts/install-runtime.mjs && tsc -p tsconfig.json && cp -R runtime/. dist/runtime/",
+    "build": "tsc -p tsconfig.json && mkdir -p dist/runtime && cp -R runtime/. dist/runtime/",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --import tsx --test --test-concurrency=1 tests/*.test.mjs"
   },
