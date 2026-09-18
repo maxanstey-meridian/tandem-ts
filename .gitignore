@@ -1,0 +1,66 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.vs/
+*.DotSettings.user
+
+# Node
+node_modules/
+.output/
+.nuxt/
+dist/
+
+# IDE
+.idea/
+.vscode/
+
+# Environment
+*.local
+appsettings.*.local.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Generated contracts are committed under packages/contracts/generated.
+!packages/contracts/package.json
+!packages/contracts/generated/
+!packages/contracts/generated/openapi.json
+!packages/contracts/generated/schema.d.ts
+
+plan/                                                                                                                                                                                                          
+apps/ui/plan/
+
+docs/
+
+.pnpm-store
+
+apps/ui/dist
+
+# Playwright
+apps/ui/test-results/
+apps/ui/playwright-report/
+apps/ui/playwright/.cache/
+apps/api/TestResults/
+apps/api/CaseBridge/data/
+
+.plans
+.orchrc.json
+.orch
+.claude
+.npmrc
+.playwright-mcp
+qa/
+drafts/
+strix_runs/
+.*-app.zip
+.cadence/
+ledger.sqlite3
+.threadkeeper.sqlite3*
+.env.servicebus
+.threadkeeper*
+
+# Local development TLS certificates and private keys
+.certs/
