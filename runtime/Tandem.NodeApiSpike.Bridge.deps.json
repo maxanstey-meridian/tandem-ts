@@ -9,16 +9,21 @@
     ".NETCoreApp,Version=v10.0/osx-arm64": {
       "Tandem.NodeApiSpike.Bridge/0.1.0": {
         "dependencies": {
-          "Meridian.Tandem": "0.1.1",
-          "Meridian.Tandem.Advanced": "0.1.1",
-          "Meridian.Tandem.Ledger": "0.1.1",
-          "Meridian.Tandem.OpenAICompatible": "0.1.1",
-          "Meridian.Tandem.Terminal": "0.1.1",
+          "Meridian.Tandem": "0.1.0",
+          "Meridian.Tandem.Advanced": "0.1.0",
+          "Meridian.Tandem.Ledger": "0.1.0",
+          "Meridian.Tandem.OpenAICompatible": "0.1.0",
+          "Meridian.Tandem.Terminal": "0.1.0",
           "Microsoft.Extensions.AI.OpenAI": "10.8.3",
           "Microsoft.JavaScript.NodeApi": "0.9.26",
           "Microsoft.JavaScript.NodeApi.Generator": "0.9.26",
           "OpenAI": "2.12.0",
-          "System.ClientModel": "1.14.0"
+          "System.ClientModel": "1.14.0",
+          "Tandem.Advanced": "0.1.0.0",
+          "Tandem": "0.1.0.0",
+          "Tandem.Ledger": "0.1.0.0",
+          "Tandem.OpenAICompatible": "0.1.0.0",
+          "Tandem.Terminal": "0.1.0.0"
         },
         "runtime": {
           "Tandem.NodeApiSpike.Bridge.dll": {}
@@ -88,75 +93,6 @@
           "lib/net10.0/JsonSchema.Net.Generation.dll": {
             "assemblyVersion": "7.0.0.0",
             "fileVersion": "7.3.11.0"
-          }
-        }
-      },
-      "Meridian.Tandem/0.1.1": {
-        "dependencies": {
-          "FluentValidation": "12.1.1",
-          "JsonSchema.Net.Generation": "7.3.11",
-          "Microsoft.Agents.AI": "1.16.0",
-          "Microsoft.Agents.AI.Workflows": "1.16.0",
-          "Microsoft.Extensions.AI": "10.8.3"
-        },
-        "runtime": {
-          "lib/net10.0/Tandem.dll": {
-            "assemblyVersion": "0.1.1.0",
-            "fileVersion": "0.1.1.0"
-          }
-        }
-      },
-      "Meridian.Tandem.Advanced/0.1.1": {
-        "dependencies": {
-          "FluentValidation": "12.1.1",
-          "Meridian.Tandem": "0.1.1",
-          "Microsoft.Agents.AI.Harness": "1.16.0",
-          "Microsoft.Agents.AI.Tools.Shell": "1.16.0-preview.260730.1",
-          "Microsoft.Extensions.AI": "10.8.3",
-          "Tavily": "1.0.1"
-        },
-        "runtime": {
-          "lib/net10.0/Tandem.Advanced.dll": {
-            "assemblyVersion": "0.1.1.0",
-            "fileVersion": "0.1.1.0"
-          }
-        }
-      },
-      "Meridian.Tandem.Ledger/0.1.1": {
-        "dependencies": {
-          "Meridian.Tandem": "0.1.1",
-          "Microsoft.Data.Sqlite": "10.0.10",
-          "SQLitePCLRaw.bundle_e_sqlite3": "2.1.12"
-        },
-        "runtime": {
-          "lib/net10.0/Tandem.Ledger.dll": {
-            "assemblyVersion": "0.1.1.0",
-            "fileVersion": "0.1.1.0"
-          }
-        }
-      },
-      "Meridian.Tandem.OpenAICompatible/0.1.1": {
-        "dependencies": {
-          "Microsoft.Extensions.AI": "10.8.3",
-          "OpenAI": "2.12.0",
-          "System.ClientModel": "1.14.0"
-        },
-        "runtime": {
-          "lib/net10.0/Tandem.OpenAICompatible.dll": {
-            "assemblyVersion": "0.1.1.0",
-            "fileVersion": "0.1.1.0"
-          }
-        }
-      },
-      "Meridian.Tandem.Terminal/0.1.1": {
-        "dependencies": {
-          "Meridian.Tandem": "0.1.1",
-          "Spectre.Console": "0.57.2"
-        },
-        "runtime": {
-          "lib/net10.0/Tandem.Terminal.dll": {
-            "assemblyVersion": "0.1.1.0",
-            "fileVersion": "0.1.1.0"
           }
         }
       },
@@ -706,6 +642,115 @@
             "fileVersion": "1.0.1.0"
           }
         }
+      },
+      "Meridian.Tandem/0.1.0": {
+        "dependencies": {
+          "FluentValidation": "12.1.1",
+          "JsonSchema.Net.Generation": "7.3.11",
+          "Microsoft.Agents.AI": "1.16.0",
+          "Microsoft.Agents.AI.Workflows": "1.16.0",
+          "Microsoft.Extensions.AI": "10.8.3"
+        },
+        "runtime": {
+          "Tandem.dll": {
+            "assemblyVersion": "0.1.0.0",
+            "fileVersion": "0.1.0.0"
+          }
+        }
+      },
+      "Meridian.Tandem.Advanced/0.1.0": {
+        "dependencies": {
+          "FluentValidation": "12.1.1",
+          "Meridian.Tandem": "0.1.0",
+          "Microsoft.Agents.AI.Harness": "1.16.0",
+          "Microsoft.Agents.AI.Tools.Shell": "1.16.0-preview.260730.1",
+          "Microsoft.Extensions.AI": "10.8.3",
+          "Tavily": "1.0.1"
+        },
+        "runtime": {
+          "Tandem.Advanced.dll": {
+            "assemblyVersion": "0.1.0.0",
+            "fileVersion": "0.1.0.0"
+          }
+        }
+      },
+      "Meridian.Tandem.Ledger/0.1.0": {
+        "dependencies": {
+          "Meridian.Tandem": "0.1.0",
+          "Microsoft.Data.Sqlite": "10.0.10",
+          "SQLitePCLRaw.bundle_e_sqlite3": "2.1.12"
+        },
+        "runtime": {
+          "Tandem.Ledger.dll": {
+            "assemblyVersion": "0.1.0.0",
+            "fileVersion": "0.1.0.0"
+          }
+        }
+      },
+      "Meridian.Tandem.OpenAICompatible/0.1.0": {
+        "dependencies": {
+          "Microsoft.Extensions.AI": "10.8.3",
+          "OpenAI": "2.12.0",
+          "System.ClientModel": "1.14.0"
+        },
+        "runtime": {
+          "Tandem.OpenAICompatible.dll": {
+            "assemblyVersion": "0.1.0.0",
+            "fileVersion": "0.1.0.0"
+          }
+        }
+      },
+      "Meridian.Tandem.Terminal/0.1.0": {
+        "dependencies": {
+          "Meridian.Tandem": "0.1.0",
+          "Spectre.Console": "0.57.2"
+        },
+        "runtime": {
+          "Tandem.Terminal.dll": {
+            "assemblyVersion": "0.1.0.0",
+            "fileVersion": "0.1.0.0"
+          }
+        }
+      },
+      "Tandem.Advanced/0.1.0.0": {
+        "runtime": {
+          "Tandem.Advanced.dll": {
+            "assemblyVersion": "0.1.0.0",
+            "fileVersion": "0.1.0.0"
+          }
+        }
+      },
+      "Tandem/0.1.0.0": {
+        "runtime": {
+          "Tandem.dll": {
+            "assemblyVersion": "0.1.0.0",
+            "fileVersion": "0.1.0.0"
+          }
+        }
+      },
+      "Tandem.Ledger/0.1.0.0": {
+        "runtime": {
+          "Tandem.Ledger.dll": {
+            "assemblyVersion": "0.1.0.0",
+            "fileVersion": "0.1.0.0"
+          }
+        }
+      },
+      "Tandem.OpenAICompatible/0.1.0.0": {
+        "runtime": {
+          "Tandem.OpenAICompatible.dll": {
+            "assemblyVersion": "0.1.0.0",
+            "fileVersion": "0.1.0.0"
+          }
+        }
+      },
+      "Tandem.Terminal/0.1.0.0": {
+        "runtime": {
+          "Tandem.Terminal.dll": {
+            "assemblyVersion": "0.1.0.0",
+            "fileVersion": "0.1.0.0"
+          }
+        }
       }
     }
   },
@@ -763,41 +808,6 @@
       "sha512": "sha512-ANV07AP26QlI4eN2pF2rnKqNvVOtJ0GkA/V9/FwoVAh+icPMKp2QrenR4cz9rO6MiH0fGfZVc0+QH0QP4wjNcQ==",
       "path": "jsonschema.net.generation/7.3.11",
       "hashPath": "jsonschema.net.generation.7.3.11.nupkg.sha512"
-    },
-    "Meridian.Tandem/0.1.1": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-Ni1emY3AuWK2QpUk1reP4HGGQwQHCekJznUACiZF1wN8wEW6MBj3E8XCDQHkypjMRn3m30VoR+0z2o/iAk1rrQ==",
-      "path": "meridian.tandem/0.1.1",
-      "hashPath": "meridian.tandem.0.1.1.nupkg.sha512"
-    },
-    "Meridian.Tandem.Advanced/0.1.1": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-lV2SxoyW5VyJqzeyJiGmntFWGbkoR8AHLk8xfzFxmLWzcvt3iHrxhCBSyw7z0qkhEiqmCug8INvJAmXMMBSl7w==",
-      "path": "meridian.tandem.advanced/0.1.1",
-      "hashPath": "meridian.tandem.advanced.0.1.1.nupkg.sha512"
-    },
-    "Meridian.Tandem.Ledger/0.1.1": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-CW/xuSvS+00nZVz0jsdNWoUij7/ybtLB9L91zRr1JiGkw2C+jBd3wE1efdFAtDtNOdlVsW/aGRqyr1AOBkwitA==",
-      "path": "meridian.tandem.ledger/0.1.1",
-      "hashPath": "meridian.tandem.ledger.0.1.1.nupkg.sha512"
-    },
-    "Meridian.Tandem.OpenAICompatible/0.1.1": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-BhHYOt3xa8FLLm8gIgbVAJV6rmntnRtF4QSIXggGnXTQlogvbrbkXydiT/0HIS2y4lf+01Zgo2Lu3gVnFCoQ3A==",
-      "path": "meridian.tandem.openaicompatible/0.1.1",
-      "hashPath": "meridian.tandem.openaicompatible.0.1.1.nupkg.sha512"
-    },
-    "Meridian.Tandem.Terminal/0.1.1": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-rKlMCJ3Oic1hw/j4RLo8Lk3dwPNCFohQPiCJ2b4Ts0QB7hC29Ioa0ROyPL5Lj/8SWIFY1BT16rLtC6NwGorpww==",
-      "path": "meridian.tandem.terminal/0.1.1",
-      "hashPath": "meridian.tandem.terminal.0.1.1.nupkg.sha512"
     },
     "Microsoft.Agents.AI/1.16.0": {
       "type": "package",
@@ -1092,6 +1102,56 @@
       "sha512": "sha512-WI1vRoVkNzeGU1ZMiccBI6hvGjzJWQlJJDOAuk7bUvZ6SpDBFvOHieGbTe6OnBl7H1+0hhQflbcV0YqNMtAtBw==",
       "path": "tavily/1.0.1",
       "hashPath": "tavily.1.0.1.nupkg.sha512"
+    },
+    "Meridian.Tandem/0.1.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Meridian.Tandem.Advanced/0.1.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Meridian.Tandem.Ledger/0.1.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Meridian.Tandem.OpenAICompatible/0.1.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Meridian.Tandem.Terminal/0.1.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Tandem.Advanced/0.1.0.0": {
+      "type": "reference",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Tandem/0.1.0.0": {
+      "type": "reference",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Tandem.Ledger/0.1.0.0": {
+      "type": "reference",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Tandem.OpenAICompatible/0.1.0.0": {
+      "type": "reference",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Tandem.Terminal/0.1.0.0": {
+      "type": "reference",
+      "serviceable": false,
+      "sha512": ""
     }
   }
 }

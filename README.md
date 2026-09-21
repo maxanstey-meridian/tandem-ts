@@ -15,7 +15,8 @@ agentic pipeline SDK running on .NET and Microsoft Agent Framework.
 npm install @maxanstey-meridian/tandem zod
 ```
 
-Install only this package in application code. Its runtime packages are selected automatically.
+The package includes compiled JavaScript, TypeScript declarations, and the macOS Apple silicon
+bridge runtime. Installation does not compile the SDK or download a bridge.
 
 ## Quick Start
 
@@ -56,7 +57,20 @@ console.log(result.state.normalized);
 ```
 
 State holds application facts, participants perform work, and routes decide what runs next. See the
-[TypeScript guide](https://github.com/maxanstey-meridian/tandem/tree/main/typescript) for agents,
+[examples](https://github.com/maxanstey-meridian/tandem-ts/tree/main/examples) for agents,
 capabilities, interactions, persistence, and complete examples.
 
 Licensed under the [MIT License](./LICENSE).
+
+## Development and publishing
+
+```sh
+pnpm install
+pnpm build
+pnpm test
+npm pack
+```
+
+`npm pack` and `npm publish` build fresh output before packaging. The npm package contains
+`dist`, including one copy of the vendored bridge in `dist/runtime`. Update `runtime` from
+a tested Tandem bridge build before releasing runtime changes.
