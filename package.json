@@ -1,6 +1,6 @@
 {
   "name": "@maxanstey-meridian/tandem",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "TypeScript authoring API for Tandem agentic pipelines",
   "homepage": "https://github.com/maxanstey-meridian/tandem-ts#readme",
   "license": "MIT",
