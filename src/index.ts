@@ -822,12 +822,20 @@ export interface AgentDefinition<TState, TOutput = never> {
   readonly instructions: string;
   readonly client: ChatClient;
   readonly message: (state: TState) => string;
-  readonly output?: {
-    readonly instructions: string;
-    readonly schema: z.ZodType<TOutput>;
-    readonly validateFor?: (state: TState, output: TOutput) => readonly ValidationProblem[];
-    readonly apply: (state: TState, output: TOutput) => TState;
-  };
+  readonly output?:
+    | {
+        readonly instructions: string;
+        readonly schema: z.ZodType<TOutput>;
+        readonly validateFor?: (state: TState, output: TOutput) => readonly ValidationProblem[];
+        readonly apply: (state: TState, output: TOutput) => TState;
+      }
+    | {
+        readonly instructions: string;
+        readonly raw: true;
+        readonly parse: (response: string) => TOutput;
+        readonly validateFor?: (state: TState, output: TOutput) => readonly ValidationProblem[];
+        readonly apply: (state: TState, output: TOutput) => TState;
+      };
   readonly capabilities?: readonly Capability<TState>[];
   readonly skills?: readonly AgentSkill[];
   readonly workspace?: AgentWorkspaceConfiguration<TState>;
@@ -863,6 +871,13 @@ class AgentImplementation<TState, TOutput>
       | {
           instructions: string;
           schema: z.ZodType<TOutput>;
+          validateFor?: (state: TState, output: TOutput) => readonly ValidationProblem[];
+          apply: (state: TState, output: TOutput) => TState;
+        }
+      | {
+          instructions: string;
+          raw: true;
+          parse: (response: string) => TOutput;
           validateFor?: (state: TState, output: TOutput) => readonly ValidationProblem[];
           apply: (state: TState, output: TOutput) => TState;
         }
@@ -916,6 +931,23 @@ export function agent<TState, TOutput = never>(
       definition.output.instructions,
       `Agent '${definition.id}' output instructions`,
     );
+    if ("raw" in definition.output) {
+      if (definition.output.raw !== true) {
+        throw new TandemError(`Agent '${definition.id}' output raw must be true.`);
+      }
+      if ("schema" in definition.output) {
+        throw new TandemError(
+          `Agent '${definition.id}' output schema is forbidden for raw output.`,
+        );
+      }
+      if (typeof definition.output.parse !== "function") {
+        throw new TandemError(`Agent '${definition.id}' raw output requires a parse function.`);
+      }
+    } else if ("parse" in definition.output) {
+      throw new TandemError(
+        `Agent '${definition.id}' output parse requires raw output mode.`,
+      );
+    }
   }
   const capabilities = definition.capabilities ?? [];
   const names = new Set<string>();
@@ -1334,9 +1366,9 @@ export function inspectPipeline<TState>(graph: Pipeline<TState>): PipelineInspec
               (item as CapabilityImplementation<TState, unknown>).requestJsonSchema,
             ) as unknown,
           })),
-          ...(agent.output
-            ? { outputSchema: z.toJSONSchema(agent.output.schema, { io: "input" }) }
-            : {}),
+          ...(!agent.output || "raw" in agent.output
+            ? {}
+            : { outputSchema: z.toJSONSchema(agent.output.schema, { io: "input" }) }),
           workspace: agent.workspace !== undefined,
         },
       };
@@ -1707,6 +1739,10 @@ function issues<T>(schema: z.ZodType<T>, input: string): string {
   } catch {
     return JSON.stringify([{ path: "$", message: "Invalid JSON" }]);
   }
+  return issuesParsed(schema, value);
+}
+
+function issuesParsed<T>(schema: z.ZodType<T>, value: unknown): string {
   try {
     parse(schema, value, "agent contract");
     return "";
@@ -1995,20 +2031,32 @@ function compileAgentOutput<TState, TOutput>(
   id: string,
   output: {
     instructions: string;
-    schema: z.ZodType<TOutput>;
+    schema?: z.ZodType<TOutput>;
+    raw?: true;
+    parse?: (response: string) => TOutput;
     validateFor?: (state: TState, output: TOutput) => readonly ValidationProblem[];
     apply: (state: TState, output: TOutput) => TState;
   },
   stateSchema: z.ZodType<TState>,
   callbacks: CallbackRegistry,
 ): object {
-  const validate = callbacks.registerSync((_, input) => issues(output.schema, input));
+  const raw = output.raw === true;
+  const validate = raw
+    ? callbacks.registerSync((_, input) =>
+        issuesParsed(
+          z.unknown(),
+          (output.parse as (response: string) => TOutput)(JSON.parse(input) as string),
+        ),
+      )
+    : callbacks.registerSync((_, input) => issues(output.schema!, input));
   const validateFor = output.validateFor
     ? callbacks.registerSync((state, input) =>
         validationProblems(
           output.validateFor!(
             parseJson(stateSchema, state, `${id} state`),
-            parseJson(output.schema, input, `${id} output`),
+            raw
+              ? (JSON.parse(input) as TOutput)
+              : parseJson(output.schema!, input, `${id} output`),
           ),
           `${id} output contextual validation`,
         ),
@@ -2019,15 +2067,28 @@ function compileAgentOutput<TState, TOutput>(
       stateSchema,
       output.apply(
         parseJson(stateSchema, state, `${id} state`),
-        parseJson(output.schema, input, `${id} output`),
+        raw
+          ? (JSON.parse(input) as TOutput)
+          : parseJson(output.schema!, input, `${id} output`),
       ),
       `${id} applied state`,
     ),
   );
   return {
     instructions: output.instructions,
-    jsonSchema: inputJsonSchema(output.schema, `${id} output schema`),
-    validateCallback: validate,
+    ...(raw
+      ? {
+          raw: true,
+          rawParseCallback: callbacks.registerSync((_, input) =>
+            JSON.stringify(
+              (output.parse as (response: string) => TOutput)(input),
+            ),
+          ),
+        }
+      : {
+          jsonSchema: inputJsonSchema(output.schema!, `${id} output schema`),
+          validateCallback: validate,
+        }),
     validateForCallback: validateFor,
     applyCallback: apply,
     valueType: `${id}.output`,

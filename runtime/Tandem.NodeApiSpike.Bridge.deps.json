@@ -9,11 +9,11 @@
     ".NETCoreApp,Version=v10.0/osx-arm64": {
       "Tandem.NodeApiSpike.Bridge/0.1.0": {
         "dependencies": {
-          "Meridian.Tandem": "0.1.0",
-          "Meridian.Tandem.Advanced": "0.1.0",
-          "Meridian.Tandem.Ledger": "0.1.0",
-          "Meridian.Tandem.OpenAICompatible": "0.1.0",
-          "Meridian.Tandem.Terminal": "0.1.0",
+          "Meridian.Tandem": "0.1.1",
+          "Meridian.Tandem.Advanced": "0.1.1",
+          "Meridian.Tandem.Ledger": "0.1.1",
+          "Meridian.Tandem.OpenAICompatible": "0.1.1",
+          "Meridian.Tandem.Terminal": "0.1.1",
           "Microsoft.Extensions.AI.OpenAI": "10.8.3",
           "Microsoft.JavaScript.NodeApi": "0.9.26",
           "Microsoft.JavaScript.NodeApi.Generator": "0.9.26",
@@ -91,7 +91,7 @@
           }
         }
       },
-      "Meridian.Tandem/0.1.0": {
+      "Meridian.Tandem/0.1.1": {
         "dependencies": {
           "FluentValidation": "12.1.1",
           "JsonSchema.Net.Generation": "7.3.11",
@@ -101,15 +101,15 @@
         },
         "runtime": {
           "lib/net10.0/Tandem.dll": {
-            "assemblyVersion": "0.1.0.0",
-            "fileVersion": "0.1.0.0"
+            "assemblyVersion": "0.1.1.0",
+            "fileVersion": "0.1.1.0"
           }
         }
       },
-      "Meridian.Tandem.Advanced/0.1.0": {
+      "Meridian.Tandem.Advanced/0.1.1": {
         "dependencies": {
           "FluentValidation": "12.1.1",
-          "Meridian.Tandem": "0.1.0",
+          "Meridian.Tandem": "0.1.1",
           "Microsoft.Agents.AI.Harness": "1.16.0",
           "Microsoft.Agents.AI.Tools.Shell": "1.16.0-preview.260730.1",
           "Microsoft.Extensions.AI": "10.8.3",
@@ -117,25 +117,25 @@
         },
         "runtime": {
           "lib/net10.0/Tandem.Advanced.dll": {
-            "assemblyVersion": "0.1.0.0",
-            "fileVersion": "0.1.0.0"
+            "assemblyVersion": "0.1.1.0",
+            "fileVersion": "0.1.1.0"
           }
         }
       },
-      "Meridian.Tandem.Ledger/0.1.0": {
+      "Meridian.Tandem.Ledger/0.1.1": {
         "dependencies": {
-          "Meridian.Tandem": "0.1.0",
+          "Meridian.Tandem": "0.1.1",
           "Microsoft.Data.Sqlite": "10.0.10",
           "SQLitePCLRaw.bundle_e_sqlite3": "2.1.12"
         },
         "runtime": {
           "lib/net10.0/Tandem.Ledger.dll": {
-            "assemblyVersion": "0.1.0.0",
-            "fileVersion": "0.1.0.0"
+            "assemblyVersion": "0.1.1.0",
+            "fileVersion": "0.1.1.0"
           }
         }
       },
-      "Meridian.Tandem.OpenAICompatible/0.1.0": {
+      "Meridian.Tandem.OpenAICompatible/0.1.1": {
         "dependencies": {
           "Microsoft.Extensions.AI": "10.8.3",
           "OpenAI": "2.12.0",
@@ -143,20 +143,20 @@
         },
         "runtime": {
           "lib/net10.0/Tandem.OpenAICompatible.dll": {
-            "assemblyVersion": "0.1.0.0",
-            "fileVersion": "0.1.0.0"
+            "assemblyVersion": "0.1.1.0",
+            "fileVersion": "0.1.1.0"
           }
         }
       },
-      "Meridian.Tandem.Terminal/0.1.0": {
+      "Meridian.Tandem.Terminal/0.1.1": {
         "dependencies": {
-          "Meridian.Tandem": "0.1.0",
+          "Meridian.Tandem": "0.1.1",
           "Spectre.Console": "0.57.2"
         },
         "runtime": {
           "lib/net10.0/Tandem.Terminal.dll": {
-            "assemblyVersion": "0.1.0.0",
-            "fileVersion": "0.1.0.0"
+            "assemblyVersion": "0.1.1.0",
+            "fileVersion": "0.1.1.0"
           }
         }
       },
@@ -764,40 +764,40 @@
       "path": "jsonschema.net.generation/7.3.11",
       "hashPath": "jsonschema.net.generation.7.3.11.nupkg.sha512"
     },
-    "Meridian.Tandem/0.1.0": {
+    "Meridian.Tandem/0.1.1": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-qtSgutRiEIRCfrROcfRX9g40dQynljY5veWPVuvgFjVKSxbcN9SkSaiXJoJhsFJhFFcMpHTiJrvi9EPzw1NMhw==",
-      "path": "meridian.tandem/0.1.0",
-      "hashPath": "meridian.tandem.0.1.0.nupkg.sha512"
+      "sha512": "sha512-Ni1emY3AuWK2QpUk1reP4HGGQwQHCekJznUACiZF1wN8wEW6MBj3E8XCDQHkypjMRn3m30VoR+0z2o/iAk1rrQ==",
+      "path": "meridian.tandem/0.1.1",
+      "hashPath": "meridian.tandem.0.1.1.nupkg.sha512"
     },
-    "Meridian.Tandem.Advanced/0.1.0": {
+    "Meridian.Tandem.Advanced/0.1.1": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-G4PRnXpctNuDus/KHbTqCtVH0PxfllMjqggmtHPbqp4ioGp1y8C8c6IRCDiKqek/+Pd2CIeLKM8CctXOwNcF8g==",
-      "path": "meridian.tandem.advanced/0.1.0",
-      "hashPath": "meridian.tandem.advanced.0.1.0.nupkg.sha512"
+      "sha512": "sha512-lV2SxoyW5VyJqzeyJiGmntFWGbkoR8AHLk8xfzFxmLWzcvt3iHrxhCBSyw7z0qkhEiqmCug8INvJAmXMMBSl7w==",
+      "path": "meridian.tandem.advanced/0.1.1",
+      "hashPath": "meridian.tandem.advanced.0.1.1.nupkg.sha512"
     },
-    "Meridian.Tandem.Ledger/0.1.0": {
+    "Meridian.Tandem.Ledger/0.1.1": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-roZ0Tvc03VbEpXYVumLbMNekf+AJiPenyZDBqPOD4BeUMzbPKrBIxjJDctaTBgKEXZCpTsEOT5vi3/r4qnQM6w==",
-      "path": "meridian.tandem.ledger/0.1.0",
-      "hashPath": "meridian.tandem.ledger.0.1.0.nupkg.sha512"
+      "sha512": "sha512-CW/xuSvS+00nZVz0jsdNWoUij7/ybtLB9L91zRr1JiGkw2C+jBd3wE1efdFAtDtNOdlVsW/aGRqyr1AOBkwitA==",
+      "path": "meridian.tandem.ledger/0.1.1",
+      "hashPath": "meridian.tandem.ledger.0.1.1.nupkg.sha512"
     },
-    "Meridian.Tandem.OpenAICompatible/0.1.0": {
+    "Meridian.Tandem.OpenAICompatible/0.1.1": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-QM7vTARopgEox96JazcFFX8GKUodv4KDe1DA0sJDK6FUWpdKZAwuIxeUkhirrDGz8xiCRic4RFjI9v1/6aej4w==",
-      "path": "meridian.tandem.openaicompatible/0.1.0",
-      "hashPath": "meridian.tandem.openaicompatible.0.1.0.nupkg.sha512"
+      "sha512": "sha512-BhHYOt3xa8FLLm8gIgbVAJV6rmntnRtF4QSIXggGnXTQlogvbrbkXydiT/0HIS2y4lf+01Zgo2Lu3gVnFCoQ3A==",
+      "path": "meridian.tandem.openaicompatible/0.1.1",
+      "hashPath": "meridian.tandem.openaicompatible.0.1.1.nupkg.sha512"
     },
-    "Meridian.Tandem.Terminal/0.1.0": {
+    "Meridian.Tandem.Terminal/0.1.1": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-woAt4rFhNP0VBbuB9obck/RhBqGGjd/KotmhysAPyNcwvPvjZfDmZW/haXIhtulCwJH3z7OJsDgaVWZJPdekrA==",
-      "path": "meridian.tandem.terminal/0.1.0",
-      "hashPath": "meridian.tandem.terminal.0.1.0.nupkg.sha512"
+      "sha512": "sha512-rKlMCJ3Oic1hw/j4RLo8Lk3dwPNCFohQPiCJ2b4Ts0QB7hC29Ioa0ROyPL5Lj/8SWIFY1BT16rLtC6NwGorpww==",
+      "path": "meridian.tandem.terminal/0.1.1",
+      "hashPath": "meridian.tandem.terminal.0.1.1.nupkg.sha512"
     },
     "Microsoft.Agents.AI/1.16.0": {
       "type": "package",
