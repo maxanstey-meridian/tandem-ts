@@ -389,6 +389,7 @@ export interface Terminal<TState> extends Participant<TState> {
   readonly kind: "terminal";
 }
 type Node<TState> =
+  | Collection<TState>
   | Stage<TState>
   | Interaction<TState, unknown, unknown>
   | Agent<TState>
@@ -421,6 +422,108 @@ export function stage<TState>(definition: {
   persist?: boolean;
 }): Stage<TState> {
   return new StageImplementation(definition.id, definition.persist, definition.execute);
+}
+
+const taskAgentBrand: unique symbol = Symbol("taskAgent");
+export interface TaskAgentReference {
+  readonly id: string;
+  readonly [taskAgentBrand]: true;
+}
+export interface TaskAgent<TInput, TOutput> extends TaskAgentReference {
+  readonly input: z.ZodType<TInput>;
+  readonly result: z.ZodType<TOutput>;
+}
+export interface CollectionContext {
+  readonly signal: AbortSignal;
+  run<TInput, TOutput>(agent: TaskAgent<TInput, TOutput>, input: NoInfer<TInput>): Promise<TOutput>;
+}
+export interface Collection<TState> extends Participant<TState> {
+  readonly kind: "collection";
+}
+type TaskState<TInput, TOutput> = { input: TInput; output: { value: TOutput } | null };
+class TaskAgentImplementation<TInput, TOutput> implements TaskAgent<TInput, TOutput> {
+  readonly [taskAgentBrand] = true as const;
+  readonly state: z.ZodType<TaskState<TInput, TOutput>>;
+  readonly participant: Agent<TaskState<TInput, TOutput>>;
+  constructor(
+    readonly id: string,
+    readonly input: z.ZodType<TInput>,
+    readonly result: z.ZodType<TOutput>,
+    definition: TaskAgentDefinition<TInput, TOutput>,
+  ) {
+    this.state = z.object({ input, output: z.object({ value: result }).nullable() });
+    this.participant = agent<TaskState<TInput, TOutput>, TOutput>({
+      ...definition,
+      message: (state) => definition.message(state.input),
+      output: {
+        ...definition.output,
+        validateFor: definition.output.validateFor
+          ? (state, value) => definition.output.validateFor!(state.input, value)
+          : undefined,
+        apply: (state: TaskState<TInput, TOutput>, value: TOutput) => ({
+          ...state,
+          output: { value },
+        }),
+      },
+    });
+  }
+}
+export interface TaskAgentDefinition<TInput, TOutput> extends Omit<
+  AgentDefinition<TInput, TOutput>,
+  "output" | "capabilities" | "workspace" | "checkpoint"
+> {
+  input: z.ZodType<TInput>;
+  result: z.ZodType<TOutput>;
+  output:
+    | Omit<
+        Extract<NonNullable<AgentDefinition<TInput, TOutput>["output"]>, { schema: unknown }>,
+        "apply"
+      >
+    | Omit<
+        Extract<NonNullable<AgentDefinition<TInput, TOutput>["output"]>, { raw: true }>,
+        "apply"
+      >;
+}
+export function taskAgent<TInput, TOutput>(
+  definition: TaskAgentDefinition<TInput, TOutput>,
+): TaskAgent<TInput, TOutput> {
+  return new TaskAgentImplementation(
+    definition.id,
+    definition.input,
+    definition.result,
+    definition,
+  );
+}
+interface CollectionDefinition<TState, TItem, TResult> {
+  id: string;
+  item: z.ZodType<TItem>;
+  result: z.ZodType<TResult>;
+  items: (state: TState) => readonly TItem[];
+  agents: readonly TaskAgentReference[];
+  execute: (item: TItem, context: CollectionContext) => Promise<TResult> | TResult;
+  apply: (state: TState, results: readonly TResult[]) => TState;
+  max: number;
+  persist?: boolean;
+}
+class CollectionImplementation<TState, TItem, TResult>
+  extends NodeImplementation<TState>
+  implements Collection<TState>
+{
+  readonly kind = "collection";
+  constructor(readonly definition: CollectionDefinition<TState, TItem, TResult>) {
+    super(definition.id, definition.persist);
+  }
+}
+export function collection<TState, TItem, TResult>(
+  definition: CollectionDefinition<TState, TItem, TResult>,
+): Collection<TState> {
+  if (!Number.isInteger(definition.max) || definition.max < 1 || definition.max > 2147483647) {
+    throw new TandemError("Collection max must be a positive 32-bit integer.");
+  }
+  if (new Set(definition.agents.map((agent) => agent.id)).size !== definition.agents.length) {
+    throw new TandemError("Collection agent IDs must be unique.");
+  }
+  return new CollectionImplementation(definition);
 }
 
 class InteractionImplementation<TState, TRequest, TResponse>
@@ -898,7 +1001,11 @@ class AgentImplementation<TState, TOutput>
 export function agent<TState, TOutput = never>(
   definition: AgentDefinition<TState, TOutput>,
 ): Agent<TState> {
-  requireInstructions(definition.instructions, `Agent '${definition.id}' instructions`);
+  const rawOutput =
+    definition.output && "raw" in definition.output && definition.output.raw === true;
+  if (!rawOutput || typeof definition.instructions !== "string") {
+    requireInstructions(definition.instructions, `Agent '${definition.id}' instructions`);
+  }
   const reasoningEffort = definition.reasoning?.effort;
   const reasoningMaxTokens = definition.reasoning?.maxTokens;
   if (
@@ -927,10 +1034,12 @@ export function agent<TState, TOutput = never>(
     }
   }
   if (definition.output) {
-    requireInstructions(
-      definition.output.instructions,
-      `Agent '${definition.id}' output instructions`,
-    );
+    if (!rawOutput || typeof definition.output.instructions !== "string") {
+      requireInstructions(
+        definition.output.instructions,
+        `Agent '${definition.id}' output instructions`,
+      );
+    }
     if ("raw" in definition.output) {
       if (definition.output.raw !== true) {
         throw new TandemError(`Agent '${definition.id}' output raw must be true.`);
@@ -944,9 +1053,7 @@ export function agent<TState, TOutput = never>(
         throw new TandemError(`Agent '${definition.id}' raw output requires a parse function.`);
       }
     } else if ("parse" in definition.output) {
-      throw new TandemError(
-        `Agent '${definition.id}' output parse requires raw output mode.`,
-      );
+      throw new TandemError(`Agent '${definition.id}' output parse requires raw output mode.`);
     }
   }
   const capabilities = definition.capabilities ?? [];
@@ -1171,7 +1278,7 @@ export function output<TState>(definition: {
 }
 
 export interface OrdinaryRoute<TState> {
-  readonly from: Stage<TState> | Interaction<TState, unknown, unknown>;
+  readonly from: Stage<TState> | Collection<TState> | Interaction<TState, unknown, unknown>;
   readonly to: Node<TState>;
   readonly label: string;
   readonly outcome?: never;
@@ -1324,7 +1431,15 @@ export interface InspectedRoute {
 }
 export interface InspectedNode {
   readonly id: string;
-  readonly kind: "stage" | "interaction" | "agent" | "parallel" | "completion" | "failure";
+  readonly kind:
+    | "stage"
+    | "interaction"
+    | "agent"
+    | "parallel"
+    | "collection"
+    | "completion"
+    | "failure";
+  readonly agents?: readonly string[];
   readonly persist?: boolean;
   readonly interaction?: { readonly requestSchema: unknown; readonly responseSchema: unknown };
   readonly agent?: {
@@ -1341,6 +1456,17 @@ export function inspectPipeline<TState>(graph: Pipeline<TState>): PipelineInspec
   const inspectNode = (node: Node<TState>): InspectedNode => {
     const implementation = node as NodeImplementation<TState>;
     const persist = implementation.persist;
+    if (implementation instanceof CollectionImplementation) {
+      return {
+        id: node.id,
+        kind: "collection",
+        persist,
+        max: implementation.definition.max,
+        agents: implementation.definition.agents.map(
+          (agent: TaskAgentReference) => node.id + "/" + agent.id,
+        ),
+      };
+    }
     if (node.kind === "interaction") {
       const interaction = implementation as InteractionImplementation<TState, unknown, unknown>;
       return {
@@ -1419,7 +1545,7 @@ export interface RunResult<TState> {
   readonly state: TState;
   readonly summary: string | null;
 }
-export type RunObservation =
+export type RunObservation = { readonly visitId?: string | null } & (
   | { readonly version: 1; readonly kind: "stepStarted"; readonly stepId: string }
   | { readonly version: 1; readonly kind: "stepCompleted"; readonly stepId: string }
   | { readonly version: 1; readonly kind: "stepCancelled"; readonly stepId: string }
@@ -1464,7 +1590,8 @@ export type RunObservation =
       readonly attempt: number;
       readonly problems: readonly { readonly field: string; readonly message: string }[];
       readonly rawResponse: string;
-    };
+    }
+);
 export interface TerminalPresentationOptions {
   readonly truncatedToolNames?: readonly string[];
 }
@@ -1483,19 +1610,35 @@ export interface RunOptions {
 }
 const runObservationSchema = z.discriminatedUnion("kind", [
   z
-    .object({ version: z.literal(1), kind: z.literal("stepStarted"), stepId: z.string().min(1) })
+    .object({
+      version: z.literal(1),
+      kind: z.literal("stepStarted"),
+      stepId: z.string().min(1),
+      visitId: z.string().nullable().optional(),
+    })
     .strict(),
   z
-    .object({ version: z.literal(1), kind: z.literal("stepCompleted"), stepId: z.string().min(1) })
+    .object({
+      version: z.literal(1),
+      kind: z.literal("stepCompleted"),
+      stepId: z.string().min(1),
+      visitId: z.string().nullable().optional(),
+    })
     .strict(),
   z
-    .object({ version: z.literal(1), kind: z.literal("stepCancelled"), stepId: z.string().min(1) })
+    .object({
+      version: z.literal(1),
+      kind: z.literal("stepCancelled"),
+      stepId: z.string().min(1),
+      visitId: z.string().nullable().optional(),
+    })
     .strict(),
   z
     .object({
       version: z.literal(1),
       kind: z.literal("stepFaulted"),
       stepId: z.string().min(1),
+      visitId: z.string().nullable().optional(),
       error: z.string(),
     })
     .strict(),
@@ -1504,6 +1647,7 @@ const runObservationSchema = z.discriminatedUnion("kind", [
       version: z.literal(1),
       kind: z.literal("agentText"),
       stepId: z.string().min(1),
+      visitId: z.string().nullable().optional(),
       text: z.string(),
     })
     .strict(),
@@ -1512,6 +1656,7 @@ const runObservationSchema = z.discriminatedUnion("kind", [
       version: z.literal(1),
       kind: z.literal("agentModelSelected"),
       stepId: z.string().min(1),
+      visitId: z.string().nullable().optional(),
       modelId: z.string().min(1),
     })
     .strict(),
@@ -1520,6 +1665,7 @@ const runObservationSchema = z.discriminatedUnion("kind", [
       version: z.literal(1),
       kind: z.literal("agentReasoning"),
       stepId: z.string().min(1),
+      visitId: z.string().nullable().optional(),
       text: z.string(),
     })
     .strict(),
@@ -1528,6 +1674,7 @@ const runObservationSchema = z.discriminatedUnion("kind", [
       version: z.literal(1),
       kind: z.literal("agentUsage"),
       stepId: z.string().min(1),
+      visitId: z.string().nullable().optional(),
       inputTokens: z.number().int().nonnegative(),
       outputTokens: z.number().int().nonnegative(),
       reasoningTokens: z.number().int().nonnegative(),
@@ -1540,6 +1687,7 @@ const runObservationSchema = z.discriminatedUnion("kind", [
       version: z.literal(1),
       kind: z.literal("structuredOutputRejected"),
       stepId: z.string().min(1),
+      visitId: z.string().nullable().optional(),
       attempt: z.number().int().positive(),
       problems: z.array(z.object({ field: z.string(), message: z.string().min(1) }).strict()),
       rawResponse: z.string(),
@@ -1559,6 +1707,7 @@ export type AcceptedValue = {
     readonly version: 1;
     readonly kind: K;
     readonly stepId: string;
+    readonly visitId?: string | null;
     readonly valueType: string | null;
     readonly payload: unknown | null;
   };
@@ -1566,6 +1715,7 @@ export type AcceptedValue = {
 const acceptedValueSchema = z
   .object({
     kind: z.enum(acceptedKinds),
+    visitId: z.string().nullable().optional(),
     stepId: z.string().min(1),
     valueType: z.string().min(1).nullable(),
     payload: z.unknown().nullable(),
@@ -1600,6 +1750,7 @@ export async function inspectAccepted(options: {
           version: 1 as const,
           kind: value.kind,
           stepId: value.stepId,
+          ...(value.visitId == null ? {} : { visitId: value.visitId }),
           valueType: value.valueType,
           payload: value.payload,
         }) as AcceptedValue,
@@ -1784,6 +1935,84 @@ function compileNode<TState>(
 ): object {
   const implementation = node as NodeImplementation<TState>;
   const base = { id: node.id, persist: implementation.persist };
+  if (implementation instanceof CollectionImplementation) {
+    const definition = implementation.definition;
+    const agents = definition.agents.map((value: TaskAgentReference) => {
+      if (!(value instanceof TaskAgentImplementation))
+        throw new TandemError("Use taskAgent to declare collection agents.");
+      return compileNode(value.participant, value.state, callbacks);
+    });
+    const itemsCallback = callbacks.registerSync((state) =>
+      serializeBoundary(
+        z.array(definition.item),
+        definition.items(parseJson(stateSchema, state, node.id + " state")),
+        node.id + " items",
+      ),
+    );
+    const runCallback = callbacks.registerAsync(async (item, scopeId, signal) => {
+      let active = false;
+      let closed = false;
+      const context: CollectionContext = {
+        signal,
+        async run<TInput, TOutput>(
+          value: TaskAgent<TInput, TOutput>,
+          input: NoInfer<TInput>,
+        ): Promise<TOutput> {
+          if (closed) throw new TandemError("Collection scope has ended.");
+          if (active) throw new TandemError("Collection item agents must be awaited serially.");
+          if (!definition.agents.includes(value) || !(value instanceof TaskAgentImplementation)) {
+            throw new TandemError("Agent is not declared in this collection.");
+          }
+          signal.throwIfAborted();
+          active = true;
+          try {
+            const { runCollectionAgentAsync } = await import("./runtime/loader.mjs");
+            const response = await runCollectionAgentAsync(
+              scopeId,
+              value.id,
+              serializeBoundary(value.state, { input, output: null }, value.id + " input"),
+            );
+            const state = parseJson(value.state, response, value.id + " output");
+            if (state.output === null) throw new TandemError("Agent returned no output.");
+            return parse(value.result, state.output.value, value.id + " result");
+          } finally {
+            active = false;
+          }
+        },
+      };
+      try {
+        const result = await definition.execute(
+          parseJson(definition.item, item, node.id + " item"),
+          context,
+        );
+        if (active) throw new TandemError("Collection item returned before its agent completed.");
+        signal.throwIfAborted();
+        return serializeBoundary(definition.result, result, node.id + " result");
+      } finally {
+        closed = true;
+      }
+    });
+    const applyCallback = callbacks.registerSync((state, results) =>
+      serializeBoundary(
+        stateSchema,
+        definition.apply(
+          parseJson(stateSchema, state, node.id + " state"),
+          parseJson(z.array(definition.result), results, node.id + " results"),
+        ),
+        node.id + " output",
+      ),
+    );
+    return {
+      ...base,
+      kind: "collection",
+      agents,
+      max: definition.max,
+      itemsCallback,
+      runCallback,
+      applyCallback,
+    };
+  }
+
   if (implementation instanceof StageImplementation) {
     const run = callbacks.registerAsync(async (state, _, signal) =>
       serializeBoundary(
@@ -2054,9 +2283,7 @@ function compileAgentOutput<TState, TOutput>(
         validationProblems(
           output.validateFor!(
             parseJson(stateSchema, state, `${id} state`),
-            raw
-              ? (JSON.parse(input) as TOutput)
-              : parseJson(output.schema!, input, `${id} output`),
+            raw ? (JSON.parse(input) as TOutput) : parseJson(output.schema!, input, `${id} output`),
           ),
           `${id} output contextual validation`,
         ),
@@ -2067,9 +2294,7 @@ function compileAgentOutput<TState, TOutput>(
       stateSchema,
       output.apply(
         parseJson(stateSchema, state, `${id} state`),
-        raw
-          ? (JSON.parse(input) as TOutput)
-          : parseJson(output.schema!, input, `${id} output`),
+        raw ? (JSON.parse(input) as TOutput) : parseJson(output.schema!, input, `${id} output`),
       ),
       `${id} applied state`,
     ),
@@ -2080,9 +2305,7 @@ function compileAgentOutput<TState, TOutput>(
       ? {
           raw: true,
           rawParseCallback: callbacks.registerSync((_, input) =>
-            JSON.stringify(
-              (output.parse as (response: string) => TOutput)(input),
-            ),
+            JSON.stringify((output.parse as (response: string) => TOutput)(input)),
           ),
         }
       : {

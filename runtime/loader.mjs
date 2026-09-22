@@ -25,11 +25,11 @@ let runtime;
 try {
   runtime = await import(bridgeUrl.href);
 } catch (error) {
-  throw new Error(
-    `Tandem could not load the ${platform} bridge from ${bridgeUrl.pathname}.`,
-    { cause: error },
-  );
+  throw new Error(`Tandem could not load the ${platform} bridge from ${bridgeUrl.pathname}.`, {
+    cause: error,
+  });
 }
 
 export const runRegisteredGraphAsync = runtime.NodePipelineBridge.runRegisteredGraphAsync;
 export const inspectAcceptedAsync = runtime.NodePipelineBridge.inspectAcceptedAsync;
+export const runCollectionAgentAsync = runtime.NodePipelineBridge.runCollectionAgentAsync;
