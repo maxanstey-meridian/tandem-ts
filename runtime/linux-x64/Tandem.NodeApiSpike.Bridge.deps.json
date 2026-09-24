@@ -1,29 +1,29 @@
 {
   "runtimeTarget": {
-    "name": ".NETCoreApp,Version=v10.0/osx-arm64",
+    "name": ".NETCoreApp,Version=v10.0/linux-x64",
     "signature": ""
   },
   "compilationOptions": {},
   "targets": {
     ".NETCoreApp,Version=v10.0": {},
-    ".NETCoreApp,Version=v10.0/osx-arm64": {
-      "Tandem.NodeApiSpike.Bridge/0.2.1": {
+    ".NETCoreApp,Version=v10.0/linux-x64": {
+      "Tandem.NodeApiSpike.Bridge/0.1.0": {
         "dependencies": {
-          "Meridian.Tandem": "0.2.1",
-          "Meridian.Tandem.Advanced": "0.2.1",
-          "Meridian.Tandem.Ledger": "0.2.1",
-          "Meridian.Tandem.OpenAICompatible": "0.2.1",
-          "Meridian.Tandem.Terminal": "0.2.1",
+          "Meridian.Tandem": "0.1.0",
+          "Meridian.Tandem.Advanced": "0.1.0",
+          "Meridian.Tandem.Ledger": "0.1.0",
+          "Meridian.Tandem.OpenAICompatible": "0.1.0",
+          "Meridian.Tandem.Terminal": "0.1.0",
           "Microsoft.Extensions.AI.OpenAI": "10.8.3",
           "Microsoft.JavaScript.NodeApi": "0.9.26",
           "Microsoft.JavaScript.NodeApi.Generator": "0.9.26",
           "OpenAI": "2.12.0",
           "System.ClientModel": "1.14.0",
-          "Tandem.Advanced": "0.2.1.0",
-          "Tandem": "0.2.1.0",
-          "Tandem.Ledger": "0.2.1.0",
-          "Tandem.OpenAICompatible": "0.2.1.0",
-          "Tandem.Terminal": "0.2.1.0"
+          "Tandem.Advanced": "0.1.0.0",
+          "Tandem": "0.1.0.0",
+          "Tandem.Ledger": "0.1.0.0",
+          "Tandem.OpenAICompatible": "0.1.0.0",
+          "Tandem.Terminal": "0.1.0.0"
         },
         "runtime": {
           "Tandem.NodeApiSpike.Bridge.dll": {}
@@ -578,7 +578,7 @@
       },
       "SQLitePCLRaw.lib.e_sqlite3/2.1.12": {
         "native": {
-          "runtimes/osx-arm64/native/libe_sqlite3.dylib": {
+          "runtimes/linux-x64/native/libe_sqlite3.so": {
             "fileVersion": "0.0.0.0"
           }
         }
@@ -643,7 +643,7 @@
           }
         }
       },
-      "Meridian.Tandem/0.2.1": {
+      "Meridian.Tandem/0.1.0": {
         "dependencies": {
           "FluentValidation": "12.1.1",
           "JsonSchema.Net.Generation": "7.3.11",
@@ -653,15 +653,15 @@
         },
         "runtime": {
           "Tandem.dll": {
-            "assemblyVersion": "0.2.1.0",
-            "fileVersion": "0.2.1.0"
+            "assemblyVersion": "0.1.0.0",
+            "fileVersion": "0.1.0.0"
           }
         }
       },
-      "Meridian.Tandem.Advanced/0.2.1": {
+      "Meridian.Tandem.Advanced/0.1.0": {
         "dependencies": {
           "FluentValidation": "12.1.1",
-          "Meridian.Tandem": "0.2.1",
+          "Meridian.Tandem": "0.1.0",
           "Microsoft.Agents.AI.Harness": "1.16.0",
           "Microsoft.Agents.AI.Tools.Shell": "1.16.0-preview.260730.1",
           "Microsoft.Extensions.AI": "10.8.3",
@@ -669,25 +669,25 @@
         },
         "runtime": {
           "Tandem.Advanced.dll": {
-            "assemblyVersion": "0.2.1.0",
-            "fileVersion": "0.2.1.0"
+            "assemblyVersion": "0.1.0.0",
+            "fileVersion": "0.1.0.0"
           }
         }
       },
-      "Meridian.Tandem.Ledger/0.2.1": {
+      "Meridian.Tandem.Ledger/0.1.0": {
         "dependencies": {
-          "Meridian.Tandem": "0.2.1",
+          "Meridian.Tandem": "0.1.0",
           "Microsoft.Data.Sqlite": "10.0.10",
           "SQLitePCLRaw.bundle_e_sqlite3": "2.1.12"
         },
         "runtime": {
           "Tandem.Ledger.dll": {
-            "assemblyVersion": "0.2.1.0",
-            "fileVersion": "0.2.1.0"
+            "assemblyVersion": "0.1.0.0",
+            "fileVersion": "0.1.0.0"
           }
         }
       },
-      "Meridian.Tandem.OpenAICompatible/0.2.1": {
+      "Meridian.Tandem.OpenAICompatible/0.1.0": {
         "dependencies": {
           "Microsoft.Extensions.AI": "10.8.3",
           "OpenAI": "2.12.0",
@@ -695,67 +695,67 @@
         },
         "runtime": {
           "Tandem.OpenAICompatible.dll": {
-            "assemblyVersion": "0.2.1.0",
-            "fileVersion": "0.2.1.0"
+            "assemblyVersion": "0.1.0.0",
+            "fileVersion": "0.1.0.0"
           }
         }
       },
-      "Meridian.Tandem.Terminal/0.2.1": {
+      "Meridian.Tandem.Terminal/0.1.0": {
         "dependencies": {
-          "Meridian.Tandem": "0.2.1",
+          "Meridian.Tandem": "0.1.0",
           "Spectre.Console": "0.57.2"
         },
         "runtime": {
           "Tandem.Terminal.dll": {
-            "assemblyVersion": "0.2.1.0",
-            "fileVersion": "0.2.1.0"
+            "assemblyVersion": "0.1.0.0",
+            "fileVersion": "0.1.0.0"
           }
         }
       },
-      "Tandem.Advanced/0.2.1.0": {
+      "Tandem.Advanced/0.1.0.0": {
         "runtime": {
           "Tandem.Advanced.dll": {
-            "assemblyVersion": "0.2.1.0",
-            "fileVersion": "0.2.1.0"
+            "assemblyVersion": "0.1.0.0",
+            "fileVersion": "0.1.0.0"
           }
         }
       },
-      "Tandem/0.2.1.0": {
+      "Tandem/0.1.0.0": {
         "runtime": {
           "Tandem.dll": {
-            "assemblyVersion": "0.2.1.0",
-            "fileVersion": "0.2.1.0"
+            "assemblyVersion": "0.1.0.0",
+            "fileVersion": "0.1.0.0"
           }
         }
       },
-      "Tandem.Ledger/0.2.1.0": {
+      "Tandem.Ledger/0.1.0.0": {
         "runtime": {
           "Tandem.Ledger.dll": {
-            "assemblyVersion": "0.2.1.0",
-            "fileVersion": "0.2.1.0"
+            "assemblyVersion": "0.1.0.0",
+            "fileVersion": "0.1.0.0"
           }
         }
       },
-      "Tandem.OpenAICompatible/0.2.1.0": {
+      "Tandem.OpenAICompatible/0.1.0.0": {
         "runtime": {
           "Tandem.OpenAICompatible.dll": {
-            "assemblyVersion": "0.2.1.0",
-            "fileVersion": "0.2.1.0"
+            "assemblyVersion": "0.1.0.0",
+            "fileVersion": "0.1.0.0"
           }
         }
       },
-      "Tandem.Terminal/0.2.1.0": {
+      "Tandem.Terminal/0.1.0.0": {
         "runtime": {
           "Tandem.Terminal.dll": {
-            "assemblyVersion": "0.2.1.0",
-            "fileVersion": "0.2.1.0"
+            "assemblyVersion": "0.1.0.0",
+            "fileVersion": "0.1.0.0"
           }
         }
       }
     }
   },
   "libraries": {
-    "Tandem.NodeApiSpike.Bridge/0.2.1": {
+    "Tandem.NodeApiSpike.Bridge/0.1.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
@@ -1103,52 +1103,52 @@
       "path": "tavily/1.0.1",
       "hashPath": "tavily.1.0.1.nupkg.sha512"
     },
-    "Meridian.Tandem/0.2.1": {
+    "Meridian.Tandem/0.1.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
     },
-    "Meridian.Tandem.Advanced/0.2.1": {
+    "Meridian.Tandem.Advanced/0.1.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
     },
-    "Meridian.Tandem.Ledger/0.2.1": {
+    "Meridian.Tandem.Ledger/0.1.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
     },
-    "Meridian.Tandem.OpenAICompatible/0.2.1": {
+    "Meridian.Tandem.OpenAICompatible/0.1.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
     },
-    "Meridian.Tandem.Terminal/0.2.1": {
+    "Meridian.Tandem.Terminal/0.1.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
     },
-    "Tandem.Advanced/0.2.1.0": {
+    "Tandem.Advanced/0.1.0.0": {
       "type": "reference",
       "serviceable": false,
       "sha512": ""
     },
-    "Tandem/0.2.1.0": {
+    "Tandem/0.1.0.0": {
       "type": "reference",
       "serviceable": false,
       "sha512": ""
     },
-    "Tandem.Ledger/0.2.1.0": {
+    "Tandem.Ledger/0.1.0.0": {
       "type": "reference",
       "serviceable": false,
       "sha512": ""
     },
-    "Tandem.OpenAICompatible/0.2.1.0": {
+    "Tandem.OpenAICompatible/0.1.0.0": {
       "type": "reference",
       "serviceable": false,
       "sha512": ""
     },
-    "Tandem.Terminal/0.2.1.0": {
+    "Tandem.Terminal/0.1.0.0": {
       "type": "reference",
       "serviceable": false,
       "sha512": ""

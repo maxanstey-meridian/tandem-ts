@@ -5,7 +5,7 @@ agentic pipeline SDK running on .NET and Microsoft Agent Framework.
 
 ## Requirements
 
-- macOS on Apple silicon
+- macOS on Apple silicon or Linux x64
 - Node.js 22 or newer
 - .NET 10 runtime
 
@@ -15,8 +15,8 @@ agentic pipeline SDK running on .NET and Microsoft Agent Framework.
 npm install @maxanstey-meridian/tandem zod
 ```
 
-The package includes compiled JavaScript, TypeScript declarations, and the macOS Apple silicon
-bridge runtime. Installation does not compile the SDK or download a bridge.
+The package includes compiled JavaScript, TypeScript declarations, and bridge runtimes for
+macOS Apple silicon and Linux x64. Installation does not compile the SDK or download a bridge.
 
 ## Quick Start
 
@@ -77,8 +77,8 @@ npm pack
 ```
 
 `npm pack` and `npm publish` build fresh output before packaging. The npm package contains
-`dist`, including one copy of the vendored bridge in `dist/runtime`. Update `runtime` from
-a tested Tandem bridge build before releasing runtime changes.
+`dist`, including the vendored platform bridge bundles in `dist/runtime`. Update each runtime
+bundle from a tested Tandem bridge build before releasing runtime changes.
 
 ## Runtime-sized collections
 

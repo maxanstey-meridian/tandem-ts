@@ -1,0 +1,30 @@
+name: Linux package
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.22.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: node --import tsx --test tests/runtime.test.mjs
+      - name: Install and smoke-test the packed package
+        run: |
+          npm pack --pack-destination "$RUNNER_TEMP"
+          mkdir -p "$RUNNER_TEMP/consumer"
+          npm install --prefix "$RUNNER_TEMP/consumer" "$RUNNER_TEMP"/*.tgz zod
+          cp tests/packed-smoke.mjs "$RUNNER_TEMP/consumer/smoke.mjs"
+          node "$RUNNER_TEMP/consumer/smoke.mjs"
