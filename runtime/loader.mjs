@@ -2,7 +2,8 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const platforms = {
-  "darwin-arm64": "./Tandem.NodeApiSpike.Bridge.mjs",
+  "darwin-arm64": "./darwin-arm64/Tandem.NodeApiSpike.Bridge.mjs",
+  "linux-x64": "./linux-x64/Tandem.NodeApiSpike.Bridge.mjs",
 };
 
 const platform = `${process.platform}-${process.arch}`;
@@ -17,7 +18,7 @@ const bridgeUrl = new URL(entry, import.meta.url);
 const bridgePath = fileURLToPath(bridgeUrl);
 if (!existsSync(bridgePath)) {
   throw new Error(
-    `Tandem bridge assets are missing at ${bridgePath}. Run \`pnpm install\` (postinstall fetches them) or \`node scripts/install-runtime.mjs\` directly.`,
+    `Tandem bridge assets are missing at ${bridgePath}. Reinstall a complete Tandem package.`,
   );
 }
 
