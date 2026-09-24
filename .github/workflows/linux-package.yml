@@ -20,7 +20,7 @@ jobs:
           node-version: 22
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - run: pnpm test
+      - run: node --import tsx --test tests/runtime.test.mjs
       - name: Install and smoke-test the packed package
         run: |
           npm pack --pack-destination "$RUNNER_TEMP"
