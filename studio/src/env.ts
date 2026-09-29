@@ -9,12 +9,14 @@ const StudioEnvSchema = z
       .string()
       .regex(/^\S+$/, "TANDEM_STUDIO_EDITOR must be an executable name or path without arguments.")
       .optional(),
+    TANDEM_STUDIO_LOAD_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
   })
   .transform((env) => ({
     cwd: env.TANDEM_STUDIO_CWD ?? process.cwd(),
     config: env.TANDEM_STUDIO_CONFIG,
     loaderChild: env.TANDEM_STUDIO_LOADER_CHILD,
     editor: env.TANDEM_STUDIO_EDITOR,
+    loadTimeoutMs: env.TANDEM_STUDIO_LOAD_TIMEOUT_MS,
   }));
 
 const parsed = StudioEnvSchema.safeParse(process.env);

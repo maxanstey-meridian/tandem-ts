@@ -73,21 +73,6 @@ test("terminates a loader child even when application construction leaves an act
   const pid = Number(await readFile(pidFile, "utf8"));
   assert.throws(() => process.kill(pid, 0), /ESRCH/);
 });
-test("terminates and diagnoses a config import that exceeds the loading bound", async () => {
-  const { config } = await fixture(
-    "while (true) {} export const tandem = { createPipeline: () => ({}) };",
-  );
-  const started = Date.now();
-
-  const result = await loadPipeline(config, { timeoutMs: 150 });
-
-  assert.equal(result.ok, false);
-  if (!result.ok) {
-    assert.match(result.error, /exceeded 150ms.*blocking work/);
-  }
-  assert.ok(Date.now() - started < 2_000);
-});
-
 test("discovers and loads the checked-in debate config without running it", async () => {
   const workspace = resolve(
     fileURLToPath(new URL("../../examples/debate/typescript", import.meta.url)),

@@ -1,15 +1,17 @@
 import type { PipelineInspection } from "@maxanstey-meridian/tandem";
-import { spawn } from "node:child_process";
+import { execFile } from "node:child_process";
 import { access, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 import { format, type FormatConfig } from "oxfmt";
 import { loadPipeline, type LoadResult } from "./loader.js";
 import { editRevision, locateOwnership } from "./ownership.js";
 import { z } from "zod";
 import { editDirectRoute, RouteEditSchema, type RouteEdit } from "./source.js";
 const require = createRequire(import.meta.url);
+const execFileAsync = promisify(execFile);
 const oxfmtConfig = resolve(dirname(fileURLToPath(import.meta.url)), "../studio.oxfmtrc.json");
 export const RouteEditRequestSchema = z.strictObject({
   edit: RouteEditSchema,
@@ -294,16 +296,18 @@ export async function typecheckProject(start: string): Promise<string> {
   if (!config) {
     return "No tsconfig.json was found for save validation.";
   }
-  return new Promise((done) => {
-    const child = spawn(
+  try {
+    await execFileAsync(
       process.execPath,
-      [require.resolve("typescript/bin/tsc"), "--noEmit", "--project", config!],
-      { cwd: dirname(config!) },
+      [require.resolve("typescript/bin/tsc"), "--noEmit", "--project", config],
+      { cwd: dirname(config), maxBuffer: 16 * 1024 * 1024 },
     );
-    let output = "";
-    child.stdout.on("data", (value) => (output += value));
-    child.stderr.on("data", (value) => (output += value));
-    child.on("close", (code) => done(code === 0 ? "" : output || "TypeScript validation failed."));
-    child.on("error", (error) => done(error.message));
-  });
+    return "";
+  } catch (error) {
+    const output =
+      typeof error === "object" && error !== null && "stdout" in error && "stderr" in error
+        ? `${String(error.stdout)}${String(error.stderr)}`
+        : "";
+    return output || (error instanceof Error ? error.message : String(error));
+  }
 }
