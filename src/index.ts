@@ -1453,53 +1453,6 @@ export interface RunResult<TState> {
   readonly state: TState;
   readonly summary: string | null;
 }
-export type RunObservation = { readonly visitId?: string | null } & (
-  | { readonly version: 1; readonly kind: "stepStarted"; readonly stepId: string }
-  | { readonly version: 1; readonly kind: "stepCompleted"; readonly stepId: string }
-  | { readonly version: 1; readonly kind: "stepCancelled"; readonly stepId: string }
-  | {
-      readonly version: 1;
-      readonly kind: "stepFaulted";
-      readonly stepId: string;
-      readonly error: string;
-    }
-  | {
-      readonly version: 1;
-      readonly kind: "agentText";
-      readonly stepId: string;
-      readonly text: string;
-    }
-  | {
-      readonly version: 1;
-      readonly kind: "agentReasoning";
-      readonly stepId: string;
-      readonly text: string;
-    }
-  | {
-      readonly version: 1;
-      readonly kind: "agentModelSelected";
-      readonly stepId: string;
-      readonly modelId: string;
-    }
-  | {
-      readonly version: 1;
-      readonly kind: "agentUsage";
-      readonly stepId: string;
-      readonly inputTokens: number;
-      readonly outputTokens: number;
-      readonly reasoningTokens: number;
-      readonly currentContextTokens: number;
-      readonly contextWindowTokens: number | null;
-    }
-  | {
-      readonly version: 1;
-      readonly kind: "structuredOutputRejected";
-      readonly stepId: string;
-      readonly attempt: number;
-      readonly problems: readonly { readonly field: string; readonly message: string }[];
-      readonly rawResponse: string;
-    }
-);
 export interface TerminalPresentationOptions {
   readonly truncatedToolNames?: readonly string[];
 }
@@ -1516,123 +1469,68 @@ export interface RunOptions {
     context: { readonly signal: AbortSignal },
   ) => void | Promise<void>;
 }
-const runObservationSchema = z.discriminatedUnion("kind", [
-  z
-    .object({
-      version: z.literal(1),
-      kind: z.literal("stepStarted"),
-      stepId: z.string().min(1),
-      visitId: z.string().nullable().optional(),
-    })
-    .strict(),
-  z
-    .object({
-      version: z.literal(1),
-      kind: z.literal("stepCompleted"),
-      stepId: z.string().min(1),
-      visitId: z.string().nullable().optional(),
-    })
-    .strict(),
-  z
-    .object({
-      version: z.literal(1),
-      kind: z.literal("stepCancelled"),
-      stepId: z.string().min(1),
-      visitId: z.string().nullable().optional(),
-    })
-    .strict(),
-  z
-    .object({
-      version: z.literal(1),
-      kind: z.literal("stepFaulted"),
-      stepId: z.string().min(1),
-      visitId: z.string().nullable().optional(),
-      error: z.string(),
-    })
-    .strict(),
-  z
-    .object({
-      version: z.literal(1),
-      kind: z.literal("agentText"),
-      stepId: z.string().min(1),
-      visitId: z.string().nullable().optional(),
-      text: z.string(),
-    })
-    .strict(),
-  z
-    .object({
-      version: z.literal(1),
-      kind: z.literal("agentModelSelected"),
-      stepId: z.string().min(1),
-      visitId: z.string().nullable().optional(),
-      modelId: z.string().min(1),
-    })
-    .strict(),
-  z
-    .object({
-      version: z.literal(1),
-      kind: z.literal("agentReasoning"),
-      stepId: z.string().min(1),
-      visitId: z.string().nullable().optional(),
-      text: z.string(),
-    })
-    .strict(),
-  z
-    .object({
-      version: z.literal(1),
-      kind: z.literal("agentUsage"),
-      stepId: z.string().min(1),
-      visitId: z.string().nullable().optional(),
-      inputTokens: z.number().int().nonnegative(),
-      outputTokens: z.number().int().nonnegative(),
-      reasoningTokens: z.number().int().nonnegative(),
-      currentContextTokens: z.number().int().nonnegative(),
-      contextWindowTokens: z.number().int().nonnegative().nullable(),
-    })
-    .strict(),
-  z
-    .object({
-      version: z.literal(1),
-      kind: z.literal("structuredOutputRejected"),
-      stepId: z.string().min(1),
-      visitId: z.string().nullable().optional(),
+const observationBase = z.object({
+  version: z.literal(1),
+  stepId: z.string().min(1),
+  visitId: z.string().nullable().optional(),
+});
+const observation = <TKind extends string, TShape extends z.ZodRawShape>(
+  kind: TKind,
+  shape: TShape,
+) => observationBase.extend({ kind: z.literal(kind), ...shape }).strict();
+const tokenCount = z.number().int().nonnegative();
+const runObservationSchema = z
+  .discriminatedUnion("kind", [
+    observation("stepStarted", {}),
+    observation("stepCompleted", {}),
+    observation("stepCancelled", {}),
+    observation("stepFaulted", { error: z.string() }),
+    observation("agentText", { text: z.string() }),
+    observation("agentReasoning", { text: z.string() }),
+    observation("agentModelSelected", { modelId: z.string().min(1) }),
+    observation("agentUsage", {
+      inputTokens: tokenCount,
+      outputTokens: tokenCount,
+      reasoningTokens: tokenCount,
+      currentContextTokens: tokenCount,
+      contextWindowTokens: tokenCount.nullable(),
+    }),
+    observation("structuredOutputRejected", {
       attempt: z.number().int().positive(),
-      problems: z.array(z.object({ field: z.string(), message: z.string().min(1) }).strict()),
+      problems: z
+        .array(
+          z
+            .object({ field: z.string(), message: z.string().min(1) })
+            .strict()
+            .readonly(),
+        )
+        .readonly(),
       rawResponse: z.string(),
-    })
-    .strict(),
-]);
-const acceptedKinds = [
-  "StructuredOutputAccepted",
-  "CapabilityAccepted",
-  "InteractionRequested",
-  "InteractionAnswered",
-  "StepCompleted",
-] as const;
-type AcceptedKind = (typeof acceptedKinds)[number];
-export type AcceptedValue = {
-  [K in AcceptedKind]: {
-    readonly version: 1;
-    readonly kind: K;
-    readonly stepId: string;
-    readonly visitId?: string | null;
-    readonly valueType: string | null;
-    readonly payload: unknown | null;
-  };
-}[AcceptedKind];
-const acceptedValueSchema = z
+    }),
+  ])
+  .readonly();
+export type RunObservation = z.infer<typeof runObservationSchema>;
+const acceptedValueFields = z
   .object({
-    kind: z.enum(acceptedKinds),
-    visitId: z.string().nullable().optional(),
+    kind: z.enum([
+      "StructuredOutputAccepted",
+      "CapabilityAccepted",
+      "InteractionRequested",
+      "InteractionAnswered",
+      "StepCompleted",
+    ]),
     stepId: z.string().min(1),
+    visitId: z.string().nullable().optional(),
     valueType: z.string().min(1).nullable(),
-    payload: z.unknown().nullable(),
+    payload: z.unknown(),
   })
-  .strict()
-  .refine((value) => value.valueType !== null || value.payload !== null, {
+  .strict();
+export type AcceptedValue = Readonly<{ version: 1 } & z.infer<typeof acceptedValueFields>>;
+const acceptedValuesSchema = z.array(
+  acceptedValueFields.refine((value) => value.valueType !== null || value.payload !== null, {
     message: "valueType and payload cannot both be null",
-  });
-const acceptedValuesSchema = z.array(acceptedValueSchema);
+  }),
+);
 const runResultSchema = z
   .object({
     runId: z.uuid(),
@@ -1652,17 +1550,14 @@ export async function inspectAccepted(options: {
       acceptedValuesSchema,
       await inspectAcceptedAsync(options.ledgerPath, options.runId),
       "accepted values",
-    ).map(
-      (value) =>
-        ({
-          version: 1 as const,
-          kind: value.kind,
-          stepId: value.stepId,
-          ...(value.visitId == null ? {} : { visitId: value.visitId }),
-          valueType: value.valueType,
-          payload: value.payload,
-        }) as AcceptedValue,
-    );
+    ).map((value): AcceptedValue => ({
+      version: 1,
+      kind: value.kind,
+      stepId: value.stepId,
+      ...(value.visitId == null ? {} : { visitId: value.visitId }),
+      valueType: value.valueType,
+      payload: value.payload,
+    }));
   } catch (error) {
     if (error instanceof TandemError) {
       throw error;
