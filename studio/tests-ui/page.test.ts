@@ -91,6 +91,21 @@ vi.mock("elkjs/lib/elk.bundled.js", () => ({
   },
 }));
 
+class FakeEventSource {
+  static instances: FakeEventSource[] = [];
+  readonly listeners = new Map<string, () => void>();
+  closed = false;
+  constructor(readonly url: string) {
+    FakeEventSource.instances.push(this);
+  }
+  addEventListener(type: string, listener: () => void) {
+    this.listeners.set(type, listener);
+  }
+  close() {
+    this.closed = true;
+  }
+}
+
 let Page: typeof import("../app/pages/index.vue").default;
 beforeAll(async () => {
   const values = new Map<string, string>();
@@ -101,6 +116,7 @@ beforeAll(async () => {
   };
   Object.assign(globalThis, {
     computed,
+    EventSource: FakeEventSource,
     localStorage: storage,
     nextTick,
     onBeforeUnmount,
@@ -199,9 +215,7 @@ async function mounted(fetch: ReturnType<typeof vi.fn>) {
 
 describe("confirmed graph editing", () => {
   it("does not claim to retain a graph when the initial load fails", async () => {
-    const fetch = vi.fn(async (url: string) =>
-      url === "/api/changes" ? { generation: 0 } : { ok: false, error: "configuration failed" },
-    );
+    const fetch = vi.fn(async () => ({ ok: false, error: "configuration failed" }));
     const wrapper = await mounted(fetch);
 
     expect(wrapper.text()).toContain("Studio could not load a pipeline.");
@@ -209,9 +223,7 @@ describe("confirmed graph editing", () => {
     wrapper.unmount();
   });
   it("distinguishes inherited, explicitly enabled, and explicitly disabled persistence", async () => {
-    const fetch = vi.fn(async (url: string) =>
-      url === "/api/changes" ? { generation: 0 } : response(),
-    );
+    const fetch = vi.fn(async () => response());
     const wrapper = await mounted(fetch);
 
     await wrapper.get('[data-testid="select-node-agent"]').trigger("click");
@@ -247,9 +259,6 @@ describe("confirmed graph editing", () => {
       callbacks: { execute: { file: "/project/branches.ts", line: 5 } },
     };
     const fetch = vi.fn(async (url: string) => {
-      if (url === "/api/changes") {
-        return { generation: 0 };
-      }
       if (url === "/api/open") {
         return { ok: true };
       }
@@ -274,9 +283,7 @@ describe("confirmed graph editing", () => {
   });
 
   it("renders visible semantic node kinds and output consequences", async () => {
-    const fetch = vi.fn(async (url: string) =>
-      url === "/api/changes" ? { generation: 0 } : response(),
-    );
+    const fetch = vi.fn(async () => response());
     const wrapper = await mounted(fetch);
 
     expect(wrapper.get('[data-testid="rendered-node-agent"]').text()).toContain("Agent");
@@ -292,9 +299,7 @@ describe("confirmed graph editing", () => {
 
   it("qualifies best-effort lifecycle projection only when success is unreachable", async () => {
     let current = response();
-    const fetch = vi.fn(async (url: string) =>
-      url === "/api/changes" ? { generation: 0 } : current,
-    );
+    const fetch = vi.fn(async () => current);
     const wrapper = await mounted(fetch);
     expect(wrapper.text()).not.toContain("best-effort progression only");
 
@@ -312,9 +317,7 @@ describe("confirmed graph editing", () => {
   });
 
   it("selects a real route from its Vue Flow source handle by pointer or keyboard", async () => {
-    const fetch = vi.fn(async (url: string) =>
-      url === "/api/changes" ? { generation: 0 } : response(),
-    );
+    const fetch = vi.fn(async () => response());
     const wrapper = await mounted(fetch);
     const handle = wrapper.get('[data-handle-id="port:agent:success:0"]');
     expect(handle.attributes("role")).toBe("button");
@@ -356,9 +359,7 @@ describe("confirmed graph editing", () => {
       predicate: "(state) => state.review === 'elsewhere'",
       reason: "Helper-generated conditional route.",
     });
-    const fetch = vi.fn(async (url: string) =>
-      url === "/api/changes" ? { generation: 0 } : conditional,
-    );
+    const fetch = vi.fn(async () => conditional);
     const wrapper = await mounted(fetch);
 
     await wrapper.get('[data-testid="select-route"]').trigger("click");
@@ -386,9 +387,7 @@ describe("confirmed graph editing", () => {
   });
 
   it("anchors a focused edge label to the midpoint of its bent ELK route", async () => {
-    const fetch = vi.fn(async (url: string) =>
-      url === "/api/changes" ? { generation: 0 } : response(),
-    );
+    const fetch = vi.fn(async () => response());
     const wrapper = await mounted(fetch);
 
     await wrapper.get('[data-testid="select-route"]').trigger("click");
@@ -408,9 +407,7 @@ describe("confirmed graph editing", () => {
       line: 12,
       reason: "Helper-generated route; open the routes array instead.",
     });
-    const fetch = vi.fn(async (url: string) =>
-      url === "/api/changes" ? { generation: 0 } : readonly,
-    );
+    const fetch = vi.fn(async () => readonly);
     const wrapper = await mounted(fetch);
 
     await wrapper.get('[data-testid="select-route"]').trigger("click");
@@ -421,9 +418,7 @@ describe("confirmed graph editing", () => {
   });
 
   it("drops absolute ELK edge geometry after drag and refreshes connected edges with manual positions", async () => {
-    const fetch = vi.fn(async (url: string) =>
-      url === "/api/changes" ? { generation: 0 } : response(),
-    );
+    const fetch = vi.fn(async () => response());
     const wrapper = await mounted(fetch);
 
     expect(wrapper.get('[data-testid="flow"]').attributes("data-edge-path")).toContain("M 10 10");
@@ -438,9 +433,7 @@ describe("confirmed graph editing", () => {
   });
 
   it("temporarily emphasizes hovered routes and restores the existing selection on leave", async () => {
-    const fetch = vi.fn(async (url: string) =>
-      url === "/api/changes" ? { generation: 0 } : response(),
-    );
+    const fetch = vi.fn(async () => response());
     const wrapper = await mounted(fetch);
 
     await wrapper.get('[data-testid="select-node-enabled"]').trigger("click");
@@ -479,9 +472,7 @@ describe("confirmed graph editing", () => {
     compacted.graph.nodes.push({ id: "failed", kind: "failure" });
     compacted.graph.outputs.push("failed");
     compacted.ownership.participants.failed = { editable: true };
-    const fetch = vi.fn(async (url: string) =>
-      url === "/api/changes" ? { generation: 0 } : compacted,
-    );
+    const fetch = vi.fn(async () => compacted);
     const wrapper = await mounted(fetch);
 
     expect(wrapper.get('[data-testid="flow"]').attributes("data-edge-count")).toBe("1");
@@ -540,9 +531,7 @@ describe("confirmed graph editing", () => {
     };
     const finish = { ...route, id: "route:1", order: 1 };
     let current = response([alternate, finish]);
-    const fetch = vi.fn(async (url: string) =>
-      url === "/api/changes" ? { generation: 0 } : current,
-    );
+    const fetch = vi.fn(async () => current);
     const wrapper = await mounted(fetch);
     const finishRow = wrapper
       .findAll(".route-row")
@@ -593,9 +582,7 @@ describe("confirmed graph editing", () => {
   });
 
   it("retains the last valid graph and diagnoses reload and re-layout ELK failures", async () => {
-    const fetch = vi.fn(async (url: string) =>
-      url === "/api/changes" ? { generation: 0 } : response(),
-    );
+    const fetch = vi.fn(async () => response());
     const wrapper = await mounted(fetch);
     expect(wrapper.get('[data-testid="flow"]').attributes("data-edge-count")).toBe("1");
 
@@ -614,9 +601,7 @@ describe("confirmed graph editing", () => {
   });
 
   it("rolls back a failed mode transition without corrupting the other mode's positions", async () => {
-    const fetch = vi.fn(async (url: string) =>
-      url === "/api/changes" ? { generation: 0 } : response(),
-    );
+    const fetch = vi.fn(async () => response());
     const wrapper = await mounted(fetch);
     await wrapper.get('[data-testid="drag-node"]').trigger("click");
     await nextTick();
@@ -643,9 +628,7 @@ describe("confirmed graph editing", () => {
   });
 
   it("disables Vue Flow keyboard deletion so confirmed edges cannot disappear in the browser", async () => {
-    const fetch = vi.fn(async (url: string) =>
-      url === "/api/changes" ? { generation: 0 } : response(),
-    );
+    const fetch = vi.fn(async () => response());
     const wrapper = await mounted(fetch);
 
     expect(wrapper.get('[data-testid="flow"]').attributes("data-delete-key")).toBe("null");
@@ -660,9 +643,6 @@ describe("confirmed graph editing", () => {
   it("publishes deletion only after successful reconstruction and retains the graph on failure", async () => {
     let saveSucceeds = false;
     const fetch = vi.fn(async (url: string) => {
-      if (url === "/api/changes") {
-        return { generation: 0 };
-      }
       if (url === "/api/routes") {
         return saveSucceeds ? { ok: true } : { ok: false, error: "reconstruction failed" };
       }
@@ -687,9 +667,6 @@ describe("confirmed graph editing", () => {
     let saveSucceeds = false;
     const reconnected = { ...route, target: "agent" };
     const fetch = vi.fn(async (url: string) => {
-      if (url === "/api/changes") {
-        return { generation: 0 };
-      }
       if (url === "/api/routes") {
         return saveSucceeds ? { ok: true } : { ok: false, error: "reconnect rejected" };
       }
@@ -728,9 +705,7 @@ describe("confirmed graph editing", () => {
   });
 
   it("drafts a route from an outcome-less participant dragged without a route handle", async () => {
-    const fetch = vi.fn(async (url: string) =>
-      url === "/api/changes" ? { generation: 0 } : response(),
-    );
+    const fetch = vi.fn(async () => response());
     const wrapper = await mounted(fetch);
 
     await wrapper.get('[data-testid="connect-stage"]').trigger("click");
@@ -738,5 +713,22 @@ describe("confirmed graph editing", () => {
     expect(wrapper.text()).toContain("Create route");
     expect(wrapper.text()).not.toContain("What happened?");
     wrapper.unmount();
+  });
+
+  it("reloads the graph when the server pushes a source change and closes the stream on unmount", async () => {
+    let current = response();
+    const fetch = vi.fn(async () => current);
+    const wrapper = await mounted(fetch);
+    const changes = FakeEventSource.instances.at(-1)!;
+    expect(changes.url).toBe("/api/changes");
+    expect(wrapper.get('[data-testid="flow"]').attributes("data-edge-target")).toBe("done");
+
+    current = response([{ ...route, target: "enabled" }]);
+    changes.listeners.get("change")?.();
+    await flushPromises();
+    expect(wrapper.get('[data-testid="flow"]').attributes("data-edge-target")).toBe("enabled");
+
+    wrapper.unmount();
+    expect(changes.closed).toBe(true);
   });
 });

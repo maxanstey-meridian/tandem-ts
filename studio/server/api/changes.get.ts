@@ -1,9 +1,15 @@
-import { studioEnv } from "../../src/env";
 import { configWorkspace, watchProjectTypescript } from "../../src/watch";
+import { currentConfig } from "../utils/pipeline";
 
-export default defineEventHandler(() => {
-  const generation = watchProjectTypescript(
-    studioEnv.config ? configWorkspace(studioEnv.config) : studioEnv.cwd,
+export default defineEventHandler(async (event) => {
+  const generation = watchProjectTypescript(configWorkspace(await currentConfig()));
+  const stream = createEventStream(event);
+  const unsubscribe = generation.subscribe(
+    (value) => void stream.push({ event: "change", data: String(value) }),
   );
-  return { generation: generation() };
+  stream.onClosed(async () => {
+    unsubscribe();
+    await stream.close();
+  });
+  return stream.send();
 });

@@ -268,32 +268,13 @@ export function useStudioGraph() {
     }
   }
 
-  let changeTimer: ReturnType<typeof setInterval> | undefined;
-  let sourceGeneration = -1;
-  let checkingChanges = false;
-  async function checkChanges() {
-    if (checkingChanges) {
-      return;
-    }
-    checkingChanges = true;
-    try {
-      const result = await $fetch<{ generation: number }>("/api/changes");
-      if (sourceGeneration < 0) {
-        sourceGeneration = result.generation;
-      } else if (result.generation > sourceGeneration) {
-        sourceGeneration = result.generation;
-        await reload();
-      }
-    } finally {
-      checkingChanges = false;
-    }
-  }
+  let changes: EventSource | undefined;
   onMounted(() => {
     void reload(true);
-    void checkChanges();
-    changeTimer = setInterval(() => void checkChanges(), 500);
+    changes = new EventSource("/api/changes");
+    changes.addEventListener("change", () => void reload());
   });
-  onBeforeUnmount(() => clearInterval(changeTimer));
+  onBeforeUnmount(() => changes?.close());
 
   const implementation = {
     loaded,

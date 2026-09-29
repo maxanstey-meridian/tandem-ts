@@ -6,8 +6,12 @@ import { loadPipeline } from "../../src/loader";
 import { locateOwnership, type SourceOwnership } from "../../src/ownership";
 import { configWorkspace, watchProjectTypescript } from "../../src/watch";
 
+export function currentConfig(): Promise<string> {
+  return discoverConfig(studioEnv.cwd, studioEnv.config);
+}
+
 export async function loadCurrentPipeline() {
-  const config = await discoverConfig(studioEnv.cwd, studioEnv.config);
+  const config = await currentConfig();
   return { config, loaded: await loadPipeline(config) };
 }
 

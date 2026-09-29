@@ -38,3 +38,20 @@ test("explicit config watches its application workspace instead of invocation CW
   await wait(300);
   assert.equal(generation(), 1);
 });
+
+test("subscribers are notified once per debounced change and can unsubscribe", async () => {
+  const root = await mkdtemp(join(tmpdir(), "studio-watch-subscribe-"));
+  const generation = watchProjectTypescript(root);
+  await generation.ready;
+  const seen: number[] = [];
+  const unsubscribe = generation.subscribe((value) => seen.push(value));
+  await writeFile(join(root, "a.ts"), "export const a = 1;");
+  await writeFile(join(root, "b.ts"), "export const b = 1;");
+  await wait(300);
+  assert.deepEqual(seen, [1]);
+  unsubscribe();
+  await writeFile(join(root, "a.ts"), "export const a = 2;");
+  await wait(300);
+  assert.deepEqual(seen, [1]);
+  assert.equal(generation(), 2);
+});
