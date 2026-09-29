@@ -1,23 +1,54 @@
 import { inspectAccepted, run, type ChatClient } from "@maxanstey-meridian/tandem";
-import { spawn } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createPipeline } from "../examples/code-writer/typescript/src/pipeline.js";
+import {
+  startFakeOpenAi,
+  writeChatCompletion,
+  writeModels,
+  writeNotFound,
+  writeResponse,
+} from "./support/fake-openai.mjs";
+
+const sources = [
+  `(input) => input.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")`,
+  `(input) => input.trim().toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")`,
+  `function slugify(input) { return input.trim().toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""); }`,
+];
+const reviews = [
+  {
+    decision: "RequestChanges",
+    summary: "Correct behavior, but improve maintainability.",
+    findings: ["Use a named function expression so the implementation is self-identifying."],
+  },
+  { decision: "Accept", summary: "The slugify implementation is accepted.", findings: [] },
+];
+let implementerVisit = 0;
+let reviewerVisit = 0;
 
 const directory = mkdtempSync(join(tmpdir(), "tandem-function-protocol-"));
-const logPath = join(directory, "requests.jsonl");
 const ledgerPath = join(directory, "function.sqlite3");
-const server = spawn(
-  process.execPath,
-  [new URL("function-protocol-server.mjs", import.meta.url).pathname, logPath],
-  { stdio: ["ignore", "pipe", "inherit"] },
-);
-const port = await new Promise<number>((resolve, reject) => {
-  server.once("error", reject);
-  server.stdout.once("data", (data) => resolve(Number(data.toString().trim())));
+const server = await startFakeOpenAi(({ url }, response) => {
+  if (url === "/v1/models") return writeModels(response, "gpt-5.6-sol");
+  if (url === "/v1/chat/completions") {
+    implementerVisit += 1;
+    return writeChatCompletion(response, {
+      toolCall: {
+        name: "submit_implementation",
+        arguments: {
+          implementation: sources[implementerVisit - 1],
+          rationale: `Implementation revision ${implementerVisit}`,
+        },
+      },
+    });
+  }
+  if (url === "/v1/responses") {
+    return writeResponse(response, JSON.stringify(reviews[Math.min(reviewerVisit++, 1)]));
+  }
+  writeNotFound(response);
 });
-const endpoint = `http://127.0.0.1:${port}/v1`;
+const endpoint = server.url;
 const implementer: ChatClient = {
   kind: "openai-compatible",
   version: 1,
@@ -49,12 +80,11 @@ try {
     { ledgerPath },
   );
   const accepted = await inspectAccepted({ ledgerPath, runId: result.runId });
-  const requests = readFileSync(logPath, "utf8").trim().split("\n").map(JSON.parse);
-  console.log(JSON.stringify({ result, accepted, requests }));
+  console.log(JSON.stringify({ result, accepted, requests: server.requests }));
 } catch (error) {
-  console.error(readFileSync(logPath, "utf8"));
+  console.error(JSON.stringify(server.requests));
   throw error;
 } finally {
-  server.kill();
+  await server.close();
   rmSync(directory, { recursive: true, force: true });
 }

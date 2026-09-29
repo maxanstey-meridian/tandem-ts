@@ -1,38 +1,26 @@
-import { spawn } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
+import {
+  agent,
+  agentTools,
+  agentWorkspace,
+  output,
+  parallel,
+  pipeline,
+  route,
+  run,
+  stage,
+} from "../dist/index.js";
+import { startFakeOpenAi, writeModels, writeResponse } from "./support/fake-openai.mjs";
 
 const directory = mkdtempSync(join(tmpdir(), "tandem-parallel-agent-"));
-const logPath = join(directory, "requests.jsonl");
-const server = spawn(
-  process.execPath,
-  [new URL("openai-server-child.mjs", import.meta.url).pathname, logPath],
-  { stdio: ["ignore", "pipe", "inherit"] },
+const server = await startFakeOpenAi(({ url }, response) =>
+  url === "/v1/models"
+    ? writeModels(response, "gpt-5.6-sol")
+    : writeResponse(response, JSON.stringify({ answer: 42 })),
 );
-let cleanupPromise;
-const cleanup = () =>
-  (cleanupPromise ??= (async () => {
-    if (server.exitCode === null && server.signalCode === null) {
-      const exited = new Promise((resolve) => server.once("exit", resolve));
-      server.kill();
-      await exited;
-    }
-    rmSync(directory, { recursive: true, force: true });
-  })());
-process.once("SIGTERM", () => {
-  void cleanup().finally(() => process.exit(143));
-});
-process.once("SIGINT", () => {
-  void cleanup().finally(() => process.exit(130));
-});
-const port = await new Promise((resolve, reject) => {
-  server.once("error", reject);
-  server.stdout.once("data", (data) => resolve(Number(data.toString().trim())));
-});
-const { agent, agentTools, agentWorkspace, output, parallel, pipeline, route, run, stage } =
-  await import("../dist/index.js");
 
 const State = z.object({
   values: z.array(z.string()),
@@ -49,7 +37,7 @@ const worker = agent({
   client: {
     kind: "openai-compatible",
     version: 1,
-    endpoint: `http://127.0.0.1:${port}/v1`,
+    endpoint: server.url,
     model: "gpt-5.6-sol",
     wireApi: "responses",
   },
@@ -95,11 +83,7 @@ try {
     workspacePath: directory,
     mutationAuthorized: false,
   });
-  const requests = readFileSync(logPath, "utf8")
-    .trim()
-    .split("\n")
-    .map((line) => JSON.parse(line));
-  const modelRequest = requests.find((request) => request.url === "/v1/responses");
+  const modelRequest = server.requests.find((request) => request.url === "/v1/responses");
   console.log(
     JSON.stringify({
       values: result.state.values,
@@ -108,6 +92,6 @@ try {
     }),
   );
 } finally {
-  await cleanup();
+  await server.close();
+  rmSync(directory, { recursive: true, force: true });
 }
-process.exit(0);

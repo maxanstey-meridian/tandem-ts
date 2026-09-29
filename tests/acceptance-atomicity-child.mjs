@@ -1,24 +1,30 @@
-import { spawn } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { agent, capability, output, pipeline, route, run } from "../dist/index.js";
+import {
+  startFakeOpenAi,
+  writeChatCompletion,
+  writeModels,
+  writeResponse,
+} from "./support/fake-openai.mjs";
 
 const mode = process.argv[2];
 const capabilityMode = mode.startsWith("capability");
 const jsonLossMode = mode.endsWith("json");
 const directory = mkdtempSync(join(tmpdir(), "tandem-atomicity-"));
-const logPath = join(directory, "requests.jsonl");
 const ledgerPath = join(directory, "ledger.sqlite3");
-const serverFile = capabilityMode ? "function-protocol-server.mjs" : "openai-server-child.mjs";
-const server = spawn(process.execPath, [new URL(serverFile, import.meta.url).pathname, logPath], {
-  stdio: ["ignore", "pipe", "inherit"],
-});
-const port = await new Promise((resolve, reject) => {
-  server.once("error", reject);
-  server.stdout.once("data", (data) => resolve(Number(data.toString().trim())));
+const server = await startFakeOpenAi(({ url }, response) => {
+  if (url === "/v1/models") return writeModels(response, "gpt-5.6-sol");
+  if (!capabilityMode) return writeResponse(response, JSON.stringify({ answer: 42 }));
+  writeChatCompletion(response, {
+    toolCall: {
+      name: "submit_implementation",
+      arguments: { implementation: "(input) => input", rationale: "Identity." },
+    },
+  });
 });
 
 const State = z.object({ value: z.number() });
@@ -42,7 +48,7 @@ const worker = agent({
   client: {
     kind: "openai-compatible",
     version: 1,
-    endpoint: `http://127.0.0.1:${port}/v1`,
+    endpoint: server.url,
     model: capabilityMode ? "fixture-ds4" : "gpt-5.6-sol",
     wireApi: capabilityMode ? "completions" : "responses",
   },
@@ -99,10 +105,9 @@ try {
     }),
   );
 } finally {
-  server.kill();
-  if (!existsSync(logPath) || readFileSync(logPath, "utf8").length === 0) {
+  await server.close();
+  if (server.requests.length === 0) {
     process.exitCode = 1;
   }
   rmSync(directory, { recursive: true, force: true });
-  process.exit(process.exitCode ?? 0);
 }

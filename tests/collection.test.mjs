@@ -1,7 +1,5 @@
 import { test } from "node:test";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-const exec = promisify(execFile);
+import { exec, execChild } from "./support/run-child.mjs";
 for (const mode of [
   "empty",
   "single",
@@ -17,11 +15,7 @@ for (const mode of [
   "escaped",
 ]) {
   test("native collections: " + mode, async () => {
-    await exec(
-      process.execPath,
-      ["--import", "tsx", new URL("collection-child.ts", import.meta.url).pathname, mode],
-      { timeout: 20000 },
-    );
+    await execChild("collection-child.ts", [mode], { timeout: 20_000 });
   });
 }
 
@@ -32,6 +26,7 @@ test("collection authoring preserves typed agent inputs and outputs", async () =
       "node_modules/typescript/bin/tsc",
       "--strict",
       "--skipLibCheck",
+      "--allowJs",
       "--target",
       "ES2023",
       "--module",

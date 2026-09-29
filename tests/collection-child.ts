@@ -1,6 +1,4 @@
 import assert from "node:assert/strict";
-import { once } from "node:events";
-import { createServer } from "node:http";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -16,6 +14,7 @@ import {
   inspectPipeline,
   inspectAccepted,
 } from "../dist/index.js";
+import { startFakeOpenAi, writeChatCompletion } from "./support/fake-openai.mjs";
 const mode = process.argv[2] ?? "agents";
 const State = z.object({ values: z.array(z.string()) });
 type State = z.infer<typeof State>;
@@ -26,28 +25,13 @@ const typeCheck = (context: CollectionContext, agent: TaskAgent<string, string>)
 };
 void typeCheck;
 const directory = await mkdtemp(join(tmpdir(), "tandem-collection-"));
-const server = createServer(async (request, response) => {
-  const chunks = [];
-  for await (const chunk of request) chunks.push(chunk);
-  const body = JSON.parse(Buffer.concat(chunks).toString());
+const server = await startFakeOpenAi(({ body }, response) => {
   const text = body.messages.findLast(
     (message: { role: string }) => message.role === "user",
   ).content;
-  response.writeHead(200, { "content-type": "text/event-stream" });
-  const chunk = { id: "test", object: "chat.completion.chunk", created: 1, model: "test" };
-  response.write(
-    `data: ${JSON.stringify({ ...chunk, choices: [{ index: 0, delta: { role: "assistant", content: mode === "invalid-agent-result" ? "" : text + "!" }, finish_reason: null }] })}\n\n`,
-  );
-  response.write(
-    `data: ${JSON.stringify({ ...chunk, choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n`,
-  );
-  response.end("data: [DONE]\n\n");
+  writeChatCompletion(response, { content: mode === "invalid-agent-result" ? "" : text + "!" });
 });
-server.listen(0, "127.0.0.1");
-await once(server, "listening");
 try {
-  const address = server.address();
-  assert(address && typeof address !== "string");
   const rewrite = taskAgent({
     id: "rewrite",
     instructions: "",
@@ -56,7 +40,7 @@ try {
     client: {
       kind: "openai-compatible",
       version: 1,
-      endpoint: `http://127.0.0.1:${address.port}/v1`,
+      endpoint: server.url,
       model: "test",
       wireApi: "completions",
       verifyModel: false,
@@ -222,7 +206,6 @@ try {
   }
   console.log("passed");
 } finally {
-  server.closeAllConnections();
-  await new Promise<void>((resolve) => server.close(() => resolve()));
+  await server.close();
   await rm(directory, { recursive: true, force: true });
 }

@@ -1,17 +1,9 @@
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
 import { test } from "node:test";
-import { promisify } from "node:util";
-
-const exec = promisify(execFile);
+import { runChild } from "./support/run-child.mjs";
 
 test("Zod contracts reject unsupported behavior and schemas with contract errors", async () => {
-  const { stdout } = await exec(
-    process.execPath,
-    [new URL("zod-contracts-child.mjs", import.meta.url).pathname],
-    { timeout: 15_000 },
-  );
-  const errors = JSON.parse(stdout.trim());
+  const errors = await runChild("zod-contracts-child.mjs");
   assert.equal(errors.length, 13);
   assert.match(errors[0], /changed the boundary value/);
   assert.match(errors[1], /changed the boundary value/);

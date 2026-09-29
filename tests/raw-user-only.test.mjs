@@ -1,13 +1,8 @@
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
 import { test } from "node:test";
-import { promisify } from "node:util";
+import { execChild } from "./support/run-child.mjs";
 
 test("raw agents can send exactly one user message without system instructions", async () => {
-  const { stdout } = await promisify(execFile)(
-    process.execPath,
-    [new URL("raw-user-only-child.mjs", import.meta.url).pathname],
-    { timeout: 15000 },
-  );
+  const { stdout } = await execChild("raw-user-only-child.mjs");
   assert.match(stdout, /user-only raw output passed/u);
 });

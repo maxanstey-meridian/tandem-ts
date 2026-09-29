@@ -1,30 +1,22 @@
 import assert from "node:assert/strict";
-import { once } from "node:events";
 import { mkdtempSync, rmSync } from "node:fs";
-import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
 import { agent, inspectAccepted, output, parallel, pipeline, route, run, stage } from "../dist/index.js";
+import { startFakeOpenAi, writeChatCompletion } from "./support/fake-openai.mjs";
 
 const directory = mkdtempSync(join(tmpdir(), "tandem-concurrent-ledger-"));
 const ledgerPath = join(directory, "runs.sqlite3");
-const server = createServer(async (request, response) => {
-  for await (const _chunk of request) {}
-  response.writeHead(200, { "content-type": "text/event-stream" });
-  const chunk = { id: "test", object: "chat.completion.chunk", created: 1, model: "test" };
-  response.write(`data: ${JSON.stringify({ ...chunk, choices: [{ index: 0, delta: { role: "assistant", content: '{"value":1}' }, finish_reason: null }] })}\n\n`);
-  response.write(`data: ${JSON.stringify({ ...chunk, choices: [{ index: 0, delta: {}, finish_reason: "stop" }], usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 } })}\n\n`);
-  response.end("data: [DONE]\n\n");
-});
-server.listen(0, "127.0.0.1");
-await once(server, "listening");
+const server = await startFakeOpenAi((_request, response) =>
+  writeChatCompletion(response, { content: '{"value":1}' }),
+);
 
 try {
   const ChildState = z.object({ value: z.number() });
   const childAgent = agent({
     id: "answer", instructions: "Return a value.",
-    client: { kind: "openai-compatible", version: 1, endpoint: `http://127.0.0.1:${server.address().port}/v1`, model: "test", wireApi: "completions", verifyModel: false, maxAttempts: 1 },
+    client: { kind: "openai-compatible", version: 1, endpoint: server.url, model: "test", wireApi: "completions", verifyModel: false, maxAttempts: 1 },
     message: () => "Return one.",
     output: { instructions: "Return JSON.", schema: ChildState, apply: (_state, value) => value },
   });
@@ -57,7 +49,6 @@ try {
   }
   console.log(JSON.stringify({ parents: results.length, children: childRunIds.length }));
 } finally {
-  server.closeAllConnections();
-  await new Promise(resolve => server.close(resolve));
+  await server.close();
   rmSync(directory, { recursive: true, force: true });
 }

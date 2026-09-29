@@ -1,23 +1,14 @@
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
 import { test } from "node:test";
-import { promisify } from "node:util";
 import {
   recordCritique,
   recordProposal,
   recordVerdict,
 } from "../examples/debate/typescript/src/state.ts";
 import { recordProofread, recordSong } from "../examples/songwriter/typescript/src/state.ts";
+import { runChild } from "./support/run-child.mjs";
 
-const exec = promisify(execFile);
-const graphs = async () => {
-  const { stdout } = await exec(
-    "pnpm",
-    ["exec", "tsx", new URL("examples-child.ts", import.meta.url).pathname],
-    { timeout: 10_000 },
-  );
-  return JSON.parse(stdout.trim());
-};
+const graphs = () => runChild("examples-child.ts", [], { timeout: 10_000 });
 
 test("songwriter example models revision facts and its complete graph", async () => {
   const initial = {

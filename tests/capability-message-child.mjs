@@ -1,23 +1,13 @@
-import { spawn } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { z } from "zod";
+import { agent, capability, output, pipeline, route, run } from "../dist/index.js";
+import { startFakeOpenAi, writeChatCompletion, writeModels } from "./support/fake-openai.mjs";
 
-const directory = mkdtempSync(join(tmpdir(), "tandem-capability-fixture-"));
 const terminalPresentation = process.argv[2] === "terminal";
-const logPath = join(directory, "requests.jsonl");
-const server = spawn(
-  process.execPath,
-  [new URL("openai-server-child.mjs", import.meta.url).pathname, logPath],
-  { stdio: ["ignore", "pipe", "inherit"] },
+const server = await startFakeOpenAi(({ url }, response) =>
+  url === "/v1/models"
+    ? writeModels(response, "fixture")
+    : writeChatCompletion(response, { toolCall: { name: "accept", arguments: { accepted: true } } }),
 );
-const port = await new Promise((resolve, reject) => {
-  server.once("error", reject);
-  server.stdout.once("data", (data) => resolve(Number(data.toString().trim())));
-});
-const { agent, capability, output, pipeline, route, run } =
-  await import("../dist/index.js");
 
 const State = z.object({ prompt: z.string(), accepted: z.boolean() });
 let contextualValidations = 0;
@@ -51,7 +41,7 @@ const executor = agent({
   client: {
     kind: "openai-compatible",
     version: 1,
-    endpoint: `http://127.0.0.1:${port}/v1`,
+    endpoint: server.url,
     model: "fixture",
     wireApi: "completions",
   },
@@ -95,25 +85,12 @@ try {
   } catch (caught) {
     error = String(caught);
   }
-  const requests = readFileSync(logPath, "utf8").trim().split("\n").map(JSON.parse);
+  const bodies = server.requests
+    .filter((item) => item.url === "/v1/chat/completions")
+    .map((item) => item.body);
   console.log(
-    JSON.stringify({
-      accepted,
-      error,
-      body: requests.find((item) => item.url === "/v1/chat/completions")?.body,
-      contextualValidations,
-      applications,
-      bodies: requests
-        .filter((item) => item.url === "/v1/chat/completions")
-        .map((item) => item.body),
-    }),
+    JSON.stringify({ accepted, error, body: bodies[0], contextualValidations, applications, bodies }),
   );
-  server.kill();
-  rmSync(directory, { recursive: true, force: true });
-  process.exit(0);
-} catch (error) {
-  console.error(error);
-  server.kill();
-  rmSync(directory, { recursive: true, force: true });
-  process.exit(1);
+} finally {
+  await server.close();
 }

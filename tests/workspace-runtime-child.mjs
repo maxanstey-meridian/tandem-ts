@@ -1,36 +1,25 @@
-import { spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
+import { agent, agentTools, agentWorkspace, output, pipeline, route, run } from "../dist/index.js";
+import { startFakeOpenAi, writeChatCompletion, writeModels } from "./support/fake-openai.mjs";
 
 const directory = mkdtempSync(join(tmpdir(), "tandem-workspace-runtime-"));
 const mode = process.argv[2] ?? "execute";
-const logPath = join(directory, "requests.jsonl");
-const server = spawn(
-  process.execPath,
-  [
-    new URL("openai-server-child.mjs", import.meta.url).pathname,
-    logPath,
-    mode === "parameterized" ? "workspace-parameterized" : "workspace",
-  ],
-  { stdio: ["ignore", "pipe", "inherit"] },
-);
-const port = await new Promise((resolve, reject) => {
-  server.once("error", reject);
-  server.stdout.once("data", (data) => resolve(Number(data.toString().trim())));
-});
-const cleanup = async () => {
-  if (server.exitCode === null && server.signalCode === null) {
-    const exited = new Promise((resolve) => server.once("exit", resolve));
-    server.kill("SIGKILL");
-    await exited;
+const hostileArgument = "spaces ' \" $() `touch marker` ; New-Item marker ; && || | > <\n* $HOME";
+const server = await startFakeOpenAi(({ url, body }, response) => {
+  if (url === "/v1/models") return writeModels(response, "gpt-5.6-sol");
+  if (body.messages.some((message) => message.role === "tool")) {
+    return writeChatCompletion(response, { content: "Complete." });
   }
-  rmSync(directory, { recursive: true, force: true });
-};
-
-const { agent, agentTools, agentWorkspace, output, pipeline, route, run } =
-  await import("../dist/index.js");
+  writeChatCompletion(response, {
+    toolCall: {
+      name: "run_tests",
+      arguments: mode === "parameterized" ? { arguments: [hostileArgument] } : {},
+    },
+  });
+});
 const State = z.object({ workspacePath: z.string() });
 if (mode === "parameterized") {
   writeFileSync(
@@ -67,7 +56,7 @@ try {
     client: {
       kind: "openai-compatible",
       version: 1,
-      endpoint: `http://127.0.0.1:${port}/v1`,
+      endpoint: server.url,
       model: "gpt-5.6-sol",
       wireApi: "completions",
     },
@@ -101,6 +90,6 @@ try {
 } catch (error) {
   console.log(JSON.stringify({ error: error.message }));
 } finally {
-  await cleanup();
+  await server.close();
+  rmSync(directory, { recursive: true, force: true });
 }
-process.exit(0);

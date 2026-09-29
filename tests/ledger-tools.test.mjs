@@ -1,19 +1,11 @@
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
 import test from "node:test";
-import { promisify } from "node:util";
-const exec = promisify(execFile);
+import { runChild } from "./support/run-child.mjs";
 for (const enabled of [false, true]) {
   test(`ledger logging retains accepted values with model tools ${enabled ? "enabled" : "disabled by default"}`, async () => {
-    const { stdout } = await exec(
-      process.execPath,
-      [
-        new URL("ledger-tools-child.mjs", import.meta.url).pathname,
-        enabled ? "enabled" : "default",
-      ],
-      { timeout: 20000 },
-    );
-    const result = JSON.parse(stdout.trim());
+    const result = await runChild("ledger-tools-child.mjs", [enabled ? "enabled" : "default"], {
+      timeout: 20_000,
+    });
     assert.equal(result.succeeded, true);
     assert.equal(result.persisted, true);
     assert.deepEqual(

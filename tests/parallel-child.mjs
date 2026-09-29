@@ -3,10 +3,7 @@ import { output, parallel, pipeline, route, run, stage } from "../dist/index.js"
 
 const State = z.object({ values: z.array(z.string()) });
 let entered = 0;
-let release;
-const bothEntered = new Promise((resolve) => {
-  release = resolve;
-});
+const { promise: bothEntered, resolve: release } = Promise.withResolvers();
 const branch = (id) =>
   stage({
     id,

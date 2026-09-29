@@ -1,21 +1,17 @@
-import { spawn } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { z } from "zod";
+import { agent, output, pipeline, route, run } from "../dist/index.js";
+import {
+  startFakeOpenAi,
+  writeModels,
+  writeNotFound,
+  writeResponse,
+} from "./support/fake-openai.mjs";
 
-const directory = mkdtempSync(join(tmpdir(), "tandem-openai-fixture-"));
-const logPath = join(directory, "requests.jsonl");
-const server = spawn(
-  process.execPath,
-  [new URL("openai-server-child.mjs", import.meta.url).pathname, logPath],
-  { stdio: ["ignore", "pipe", "inherit"] },
-);
-const port = await new Promise((resolve, reject) => {
-  server.once("error", reject);
-  server.stdout.once("data", (data) => resolve(Number(data.toString().trim())));
+const server = await startFakeOpenAi(({ url }, response) => {
+  if (url === "/v1/models") return writeModels(response, "gpt-5.6-sol");
+  if (url === "/v1/responses") return writeResponse(response, JSON.stringify({ answer: 42 }));
+  writeNotFound(response);
 });
-const { agent, output, pipeline, route, run } = await import("../dist/index.js");
 
 const State = z.object({ prompt: z.string(), answer: z.number().nullable() });
 let contextualValidations = 0;
@@ -26,7 +22,7 @@ const planner = agent({
   client: {
     kind: "openai-compatible",
     version: 1,
-    endpoint: `http://127.0.0.1:${port}/v1`,
+    endpoint: server.url,
     model: "gpt-5.6-sol",
     wireApi: "responses",
     verifyModel: true,
@@ -79,13 +75,12 @@ try {
   } catch (caught) {
     error = String(caught);
   }
-  const requests = readFileSync(logPath, "utf8").trim().split("\n").map(JSON.parse);
-  const modelRequests = requests.filter((item) => item.url === "/v1/responses");
+  const modelRequests = server.requests.filter((item) => item.url === "/v1/responses");
   console.log(
     JSON.stringify({
       answer,
       error,
-      urls: requests.map((item) => item.url),
+      urls: server.requests.map((item) => item.url),
       modelBody: modelRequests[0]?.body,
       modelBodies: modelRequests.map((item) => item.body),
       contextualValidations,
@@ -93,12 +88,6 @@ try {
       observations,
     }),
   );
-  server.kill();
-  rmSync(directory, { recursive: true, force: true });
-  process.exit(0);
-} catch (error) {
-  console.error(error);
-  server.kill();
-  rmSync(directory, { recursive: true, force: true });
-  process.exit(1);
+} finally {
+  await server.close();
 }

@@ -49,10 +49,7 @@ const makeGraph = ({ execute, merge, persist = false }) => {
 try {
   if (mode === "cancel") {
     let entered = 0;
-    let release;
-    const bothEntered = new Promise((resolve) => {
-      release = resolve;
-    });
+    const { promise: bothEntered, resolve: release } = Promise.withResolvers();
     const cancellation = new AbortController();
     const events = [];
     let abortedBranches = 0;

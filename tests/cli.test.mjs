@@ -1,17 +1,11 @@
 import assert from "node:assert/strict";
-import { execFile, spawn } from "node:child_process";
+import { spawn } from "node:child_process";
 import { test } from "node:test";
-import { promisify } from "node:util";
+import { execChild } from "./support/run-child.mjs";
 
-const exec = promisify(execFile);
 async function child(mode) {
   try {
-    const result = await exec(
-      process.execPath,
-      [new URL("cli-child.mjs", import.meta.url).pathname, mode],
-      { timeout: 15_000 },
-    );
-    return { ...result, code: 0 };
+    return { ...(await execChild("cli-child.mjs", [mode])), code: 0 };
   } catch (error) {
     return { stdout: error.stdout, stderr: error.stderr, code: error.code };
   }

@@ -1,42 +1,18 @@
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
 import { test } from "node:test";
-import { promisify } from "node:util";
-const exec = promisify(execFile);
+import { execChild, runChild } from "./support/run-child.mjs";
 
 test("importing the authoring SDK does not keep Node alive", async () => {
-  const result = await exec(process.execPath, [
-    new URL("authoring-import-child.mjs", import.meta.url).pathname,
-  ]);
+  const result = await execChild("authoring-import-child.mjs");
   assert.equal(result.stdout, "imported\n");
   assert.equal(result.stderr, "");
 });
 
-async function child(mode, timeout = 15_000) {
-  const { stdout } = await exec(
-    process.execPath,
-    [new URL("lifecycle-child.mjs", import.meta.url).pathname, mode],
-    { timeout },
-  );
-  return JSON.parse(stdout.trim());
-}
-
-async function observationChild(mode) {
-  const { stdout } = await exec(
-    process.execPath,
-    [new URL("observation-child.mjs", import.meta.url).pathname, mode],
-    { timeout: 15_000 },
-  );
-  return JSON.parse(stdout.trim());
-}
+const child = (mode, timeout) => runChild("lifecycle-child.mjs", [mode], { timeout });
+const observationChild = (mode) => runChild("observation-child.mjs", [mode]);
 
 test("loads application-selected Agent Skills and read-only resources through MAF", async () => {
-  const { stdout } = await exec(
-    process.execPath,
-    [new URL("skill-child.mjs", import.meta.url).pathname],
-    { timeout: 15_000 },
-  );
-  const result = JSON.parse(stdout.trim());
+  const result = await runChild("skill-child.mjs");
   assert.equal(result.succeeded, true);
   assert(result.tools.includes("load_skill"));
   assert(result.tools.includes("read_skill_resource"));
@@ -46,12 +22,7 @@ test("loads application-selected Agent Skills and read-only resources through MA
 });
 
 test("rejects invalid model request controls while authoring", async () => {
-  const { stdout } = await exec(
-    process.execPath,
-    [new URL("model-controls-validation-child.mjs", import.meta.url).pathname],
-    { timeout: 15_000 },
-  );
-  const errors = JSON.parse(stdout.trim());
+  const errors = await runChild("model-controls-validation-child.mjs");
   assert.equal(errors.length, 12);
   assert(errors.every((error) => error.name === "TandemError"));
   assert(errors.some((error) => /reasoning effort/.test(error.message)));
@@ -64,21 +35,11 @@ test("rejects invalid model request controls while authoring", async () => {
 });
 
 test("executes a fixed workspace command through the packed MAF shell runtime", async () => {
-  const { stdout } = await exec(
-    process.execPath,
-    [new URL("workspace-runtime-child.mjs", import.meta.url).pathname],
-    { timeout: 15_000 },
-  );
-  assert.equal(JSON.parse(stdout.trim()).commandRan, true);
+  assert.equal((await runChild("workspace-runtime-child.mjs")).commandRan, true);
 });
 
 test("executes a parameterized workspace command through the packed runtime", async () => {
-  const { stdout } = await exec(
-    process.execPath,
-    [new URL("workspace-runtime-child.mjs", import.meta.url).pathname, "parameterized"],
-    { timeout: 15_000 },
-  );
-  const result = JSON.parse(stdout.trim());
+  const result = await runChild("workspace-runtime-child.mjs", ["parameterized"]);
   assert.equal(
     result.received,
     "spaces ' \" $() `touch marker` ; New-Item marker ; && || | > <\n* $HOME",
@@ -87,10 +48,7 @@ test("executes a parameterized workspace command through the packed runtime", as
 });
 
 test("rejects malformed workspace command arguments while authoring", async () => {
-  const { stdout } = await exec(process.execPath, [
-    new URL("workspace-command-validation-child.mjs", import.meta.url).pathname,
-  ]);
-  const errors = JSON.parse(stdout.trim());
+  const errors = await runChild("workspace-command-validation-child.mjs");
   assert.equal(errors.length, 8);
   assert(errors.every((error) => error.name === "TandemError"));
   assert(errors.some((error) => /must be an array of strings/.test(error.message)));
@@ -102,32 +60,25 @@ test("rejects malformed workspace command arguments while authoring", async () =
 });
 
 test("snapshots static workspace command catalogues", async () => {
-  const { stdout } = await exec(
-    process.execPath,
-    [new URL("workspace-runtime-child.mjs", import.meta.url).pathname, "mutated-catalogue"],
-    { timeout: 30_000 },
-  );
-  const result = JSON.parse(stdout.trim());
+  const result = await runChild("workspace-runtime-child.mjs", ["mutated-catalogue"], {
+    timeout: 30_000,
+  });
   assert.equal(result.commandRan, true);
   assert.equal(result.mutatedCommandRan, false);
 });
 
 test("rejects workspace command selection without a declared catalogue", async () => {
-  const { stdout } = await exec(
-    process.execPath,
-    [new URL("workspace-runtime-child.mjs", import.meta.url).pathname, "missing-catalogue"],
-    { timeout: 15_000 },
+  assert.match(
+    (await runChild("workspace-runtime-child.mjs", ["missing-catalogue"])).error,
+    /without declaring a command catalogue/,
   );
-  assert.match(JSON.parse(stdout.trim()).error, /without declaring a command catalogue/);
 });
 
 test("rejects non-boolean conditional authority callbacks", async () => {
-  const { stdout } = await exec(
-    process.execPath,
-    [new URL("workspace-runtime-child.mjs", import.meta.url).pathname, "invalid-predicate"],
-    { timeout: 15_000 },
+  assert.match(
+    (await runChild("workspace-runtime-child.mjs", ["invalid-predicate"])).error,
+    /predicate must return a boolean/,
   );
-  assert.match(JSON.parse(stdout.trim()).error, /predicate must return a boolean/);
 });
 
 test("runs package-relatively, persists accepted values, and terminalizes", async () => {
@@ -152,11 +103,7 @@ test("runs package-relatively, persists accepted values, and terminalizes", asyn
 });
 
 test("renders requested terminal presentation as plain redirected output", async () => {
-  const { stdout } = await exec(
-    process.execPath,
-    [new URL("lifecycle-child.mjs", import.meta.url).pathname, "terminal"],
-    { timeout: 15_000 },
-  );
+  const { stdout } = await execChild("lifecycle-child.mjs", ["terminal"]);
   assert.equal(stdout.includes(`${String.fromCharCode(27)}[`), false);
   assert.match(stdout, /pipeline terminal run [0-9a-f]+ started/);
   assert.match(stdout, /pipeline Succeeded: 1/);
@@ -275,12 +222,7 @@ test("supports concurrent and repeated runs in one loaded host", async () => {
 });
 
 test("rejects invalid participant identities and incomplete graph shapes", async () => {
-  const { stdout } = await exec(
-    process.execPath,
-    [new URL("identity-child.mjs", import.meta.url).pathname],
-    { timeout: 10_000 },
-  );
-  const errors = JSON.parse(stdout.trim());
+  const errors = await runChild("identity-child.mjs", [], { timeout: 10_000 });
   assert.equal(errors.length, 6);
   assert.match(errors[0], /start/);
   assert.match(errors[1], /Route/);
@@ -297,17 +239,7 @@ test("bounded soak completes and exits", async () => {
 });
 
 test("planner preflight and model requests proceed through a local protocol fixture", async () => {
-  const { stdout } = await exec(
-    "/usr/bin/env",
-    [
-      "-u",
-      "NODE_TEST_CONTEXT",
-      process.execPath,
-      new URL("planner-child.mjs", import.meta.url).pathname,
-    ],
-    { timeout: 15_000 },
-  );
-  const result = JSON.parse(stdout.trim());
+  const result = await runChild("planner-child.mjs");
   assert.equal(result.error, null);
   assert.equal(result.answer, 42);
   assert.equal(result.urls[0], "/v1/models");
@@ -344,17 +276,7 @@ test("planner preflight and model requests proceed through a local protocol fixt
 });
 
 test("one agent composes its authored message, multiple capabilities, structured output, and policies", async () => {
-  const { stdout } = await exec(
-    "/usr/bin/env",
-    [
-      "-u",
-      "NODE_TEST_CONTEXT",
-      process.execPath,
-      new URL("capability-message-child.mjs", import.meta.url).pathname,
-    ],
-    { timeout: 15_000 },
-  );
-  const result = JSON.parse(stdout.trim());
+  const result = await runChild("capability-message-child.mjs");
   assert.equal(result.error, null);
   assert.equal(result.accepted, true);
   assert.equal(result.contextualValidations, 2);
@@ -386,17 +308,7 @@ test("one agent composes its authored message, multiple capabilities, structured
 });
 
 test("TypeScript terminal presentation truncates configured tool arguments", async () => {
-  const { stdout } = await exec(
-    "/usr/bin/env",
-    [
-      "-u",
-      "NODE_TEST_CONTEXT",
-      process.execPath,
-      new URL("capability-message-child.mjs", import.meta.url).pathname,
-      "terminal",
-    ],
-    { timeout: 15_000 },
-  );
+  const { stdout } = await execChild("capability-message-child.mjs", ["terminal"]);
   assert.match(stdout, /executor tool accept started/);
   assert.doesNotMatch(stdout, /executor tool accept accepted=true/);
   const result = JSON.parse(stdout.trim().split("\n").at(-1));
@@ -406,12 +318,7 @@ test("TypeScript terminal presentation truncates configured tool arguments", asy
 
 test("rolls back durable acceptance when JavaScript state application faults", async () => {
   for (const mode of ["capability", "output"]) {
-    const { stdout } = await exec(
-      process.execPath,
-      [new URL("acceptance-atomicity-child.mjs", import.meta.url).pathname, mode],
-      { timeout: 15_000 },
-    );
-    const result = JSON.parse(stdout.trim());
+    const result = await runChild("acceptance-atomicity-child.mjs", [mode]);
     assert.equal(result.applyCalled, true);
     assert.match(result.error, /apply failed after durable acceptance/);
     assert.equal(result.persistedAcceptance, false);
@@ -420,12 +327,7 @@ test("rolls back durable acceptance when JavaScript state application faults", a
 
 test("rejects lossy capability and output applied state before commit", async () => {
   for (const mode of ["capability-json", "output-json"]) {
-    const { stdout } = await exec(
-      process.execPath,
-      [new URL("acceptance-atomicity-child.mjs", import.meta.url).pathname, mode],
-      { timeout: 15_000 },
-    );
-    const result = JSON.parse(stdout.trim());
+    const result = await runChild("acceptance-atomicity-child.mjs", [mode]);
     assert.equal(result.applyCalled, true);
     assert.match(result.error, /applied state validation failed/);
     assert.equal(result.persistedAcceptance, false);

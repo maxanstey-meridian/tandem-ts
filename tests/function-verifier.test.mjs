@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
 import { test } from "node:test";
-import { promisify } from "node:util";
+import { runChild } from "./support/run-child.mjs";
 
 const valid = `(input) => input.trim().toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")`;
 const sources = [
@@ -11,15 +10,13 @@ const sources = [
   "(input) => { while (true) {} }",
   "(input) => process.exit(0)",
 ];
-const exec = promisify(execFile);
 
 test("function verifier accepts valid source and rejects invalid source", async () => {
-  const { stdout } = await exec(
-    "pnpm",
-    ["exec", "tsx", new URL("function-verifier-child.ts", import.meta.url).pathname, ...sources],
+  const [result, syntaxError, nonFunction, nonTerminating, exiting] = await runChild(
+    "function-verifier-child.ts",
+    sources,
     { timeout: 30_000 },
   );
-  const [result, syntaxError, nonFunction, nonTerminating, exiting] = JSON.parse(stdout.trim());
 
   assert.equal(result.passed, true);
   assert.equal(result.error, null);

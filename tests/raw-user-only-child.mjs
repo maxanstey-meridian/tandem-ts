@@ -1,26 +1,11 @@
 import assert from "node:assert/strict";
-import { once } from "node:events";
-import { createServer } from "node:http";
 import { z } from "zod";
 import { agent, output, pipeline, route, run } from "../dist/index.js";
+import { startFakeOpenAi, writeChatCompletion } from "./support/fake-openai.mjs";
 
-let captured;
-const server = createServer(async (request, response) => {
-  const chunks = [];
-  for await (const chunk of request) chunks.push(chunk);
-  captured = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-  response.writeHead(200, { "content-type": "text/event-stream" });
-  const chunk = { id: "test", object: "chat.completion.chunk", created: 1, model: "test" };
-  response.write(
-    `data: ${JSON.stringify({ ...chunk, choices: [{ index: 0, delta: { role: "assistant", content: "accepted" }, finish_reason: null }] })}\n\n`,
-  );
-  response.write(
-    `data: ${JSON.stringify({ ...chunk, choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n`,
-  );
-  response.end("data: [DONE]\n\n");
-});
-server.listen(0, "127.0.0.1");
-await once(server, "listening");
+const server = await startFakeOpenAi((_request, response) =>
+  writeChatCompletion(response, { content: "accepted" }),
+);
 try {
   const raw = agent({
     id: "raw",
@@ -28,7 +13,7 @@ try {
     client: {
       kind: "openai-compatible",
       version: 1,
-      endpoint: `http://127.0.0.1:${server.address().port}/v1`,
+      endpoint: server.url,
       model: "test",
       wireApi: "completions",
       verifyModel: false,
@@ -50,10 +35,10 @@ try {
   const result = await run(graph, { text });
   assert.equal(result.succeeded, true);
   assert.equal(result.state.text, "accepted");
-  assert.deepEqual(captured.messages, [{ role: "user", content: text }]);
-  assert.equal(captured.response_format, undefined);
+  const [{ body }] = server.requests;
+  assert.deepEqual(body.messages, [{ role: "user", content: text }]);
+  assert.equal(body.response_format, undefined);
   console.log("user-only raw output passed");
 } finally {
-  server.closeAllConnections();
-  await new Promise((resolve) => server.close(resolve));
+  await server.close();
 }

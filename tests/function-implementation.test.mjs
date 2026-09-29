@@ -1,25 +1,12 @@
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
 import { test } from "node:test";
-import { promisify } from "node:util";
 import { assessImplementation } from "../examples/code-writer/typescript/src/infrastructure/assess-implementation.ts";
-
-const exec = promisify(execFile);
+import { runChild } from "./support/run-child.mjs";
 
 test("function implementation loops through verification and review to accepted code", async () => {
-  const { stdout } = await exec(
-    "/usr/bin/env",
-    [
-      "-u",
-      "NODE_TEST_CONTEXT",
-      "pnpm",
-      "exec",
-      "tsx",
-      new URL("function-protocol-child.ts", import.meta.url).pathname,
-    ],
-    { timeout: 30_000 },
-  );
-  const { result, accepted, requests } = JSON.parse(stdout.trim());
+  const { result, accepted, requests } = await runChild("function-protocol-child.ts", [], {
+    timeout: 30_000,
+  });
   const modelRequests = requests.filter(({ url }) => url !== "/v1/models");
 
   assert.deepEqual(

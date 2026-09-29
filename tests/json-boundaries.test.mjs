@@ -1,17 +1,9 @@
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
 import { test } from "node:test";
-import { promisify } from "node:util";
-
-const exec = promisify(execFile);
+import { runChild } from "./support/run-child.mjs";
 
 test("rejects values that cannot cross JSON boundaries losslessly", async () => {
-  const { stdout } = await exec(
-    process.execPath,
-    [new URL("json-boundaries-child.mjs", import.meta.url).pathname],
-    { timeout: 15_000 },
-  );
-  const results = JSON.parse(stdout.trim());
+  const results = await runChild("json-boundaries-child.mjs");
   for (const name of [
     "nan",
     "infinity",

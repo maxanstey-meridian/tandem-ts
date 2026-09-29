@@ -1,8 +1,9 @@
-import { spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
+import { agent, output, pipeline, route, run, skill } from "../dist/index.js";
+import { startFakeOpenAi, writeChatCompletion, writeModels } from "./support/fake-openai.mjs";
 
 const root = mkdtempSync(join(tmpdir(), "tandem-skill-fixture-"));
 const skillDirectory = join(root, "test-skill");
@@ -14,18 +15,23 @@ writeFileSync(
 );
 writeFileSync(join(skillDirectory, "references", "rules.md"), "Prefer explicit TS boundaries.");
 writeFileSync(join(skillDirectory, "scripts", "unsafe.sh"), "exit 99");
-const logPath = join(root, "requests.jsonl");
-const server = spawn(
-  process.execPath,
-  [new URL("skill-server-child.mjs", import.meta.url).pathname, logPath],
-  { stdio: ["ignore", "pipe", "inherit"] },
-);
-const port = await new Promise((resolve, reject) => {
-  server.once("error", reject);
-  server.stdout.once("data", (data) => resolve(Number(data.toString().trim())));
+const skillTools = ["load_skill", "read_skill_resource"];
+let visit = 0;
+const server = await startFakeOpenAi(({ url, body }, response) => {
+  if (url === "/v1/models") return writeModels(response, "fixture");
+  const name = skillTools[visit++];
+  if (name === undefined) return writeChatCompletion(response, { content: "Reviewed with the skill." });
+  const tool = body.tools.find((candidate) => candidate.function.name === name).function;
+  const properties = Object.keys(tool.parameters.properties);
+  writeChatCompletion(response, {
+    toolCall: {
+      name,
+      arguments: Object.fromEntries(
+        properties.map((property, index) => [property, index === 0 ? "test-skill" : "references/rules.md"]),
+      ),
+    },
+  });
 });
-const { agent, output, pipeline, route, run, skill } =
-  await import("../dist/index.js");
 const State = z.object({ reviewed: z.boolean() });
 const reviewer = agent({
   id: "reviewer",
@@ -33,7 +39,7 @@ const reviewer = agent({
   client: {
     kind: "openai-compatible",
     version: 1,
-    endpoint: `http://127.0.0.1:${port}/v1`,
+    endpoint: server.url,
     model: "fixture",
     wireApi: "completions",
   },
@@ -52,8 +58,7 @@ const graph = pipeline({
 
 try {
   const result = await run(graph, { reviewed: false });
-  const requests = readFileSync(logPath, "utf8").trim().split("\n").map(JSON.parse);
-  const modelRequests = requests.filter((item) => item.url === "/v1/chat/completions");
+  const modelRequests = server.requests.filter((item) => item.url === "/v1/chat/completions");
   console.log(
     JSON.stringify({
       succeeded: result.succeeded,
@@ -67,12 +72,7 @@ try {
       exposedScript: JSON.stringify(modelRequests).includes("unsafe.sh"),
     }),
   );
-  server.kill();
+} finally {
+  await server.close();
   rmSync(root, { recursive: true, force: true });
-  process.exit(0);
-} catch (error) {
-  console.error(error);
-  server.kill();
-  rmSync(root, { recursive: true, force: true });
-  process.exit(1);
 }
