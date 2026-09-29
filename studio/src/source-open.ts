@@ -37,9 +37,9 @@ export function resolveSourceTarget(
   return route?.file && route.line ? { file: route.file, line: route.line } : undefined;
 }
 
-export function openSourceLocation(location: SourceLocation, launch: typeof spawn = spawn): void {
+export function openSourceLocation(location: SourceLocation): void {
   if (studioEnv.editor) {
-    launch(studioEnv.editor, [`${location.file}:${location.line}`], {
+    spawn(studioEnv.editor, [`${location.file}:${location.line}`], {
       detached: true,
       stdio: "ignore",
     }).unref();
@@ -48,5 +48,5 @@ export function openSourceLocation(location: SourceLocation, launch: typeof spaw
   const command =
     process.platform === "darwin" ? "open" : process.platform === "win32" ? "cmd" : "xdg-open";
   const args = process.platform === "win32" ? ["/c", "start", "", location.file] : [location.file];
-  launch(command, args, { detached: true, stdio: "ignore" }).unref();
+  spawn(command, args, { detached: true, stdio: "ignore" }).unref();
 }

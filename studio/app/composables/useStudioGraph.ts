@@ -5,7 +5,7 @@ import { isEqual } from "ohash";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { mapElkLayout } from "../../src/elk-geometry";
 import type { GraphResponse } from "../../src/graph-response";
-import { restoreIncomingPositions } from "../../src/presentation";
+import { mergeStablePositions, parseSavedPositions } from "../../src/presentation";
 import {
   elkGraph,
   modePositionStorageKey,
@@ -96,14 +96,13 @@ export function useStudioGraph() {
     const current = sameIdentity && retainLivePositions ? positions() : {};
     // Layout may throw; nothing is committed before it succeeds.
     const layout = await automaticPositions(result.graph, nextMode);
-    const retained = restoreIncomingPositions(
-      result.config,
-      result.graph.name,
+    const retained = mergeStablePositions(
       result.graph.nodes.map((node) => node.id),
       current,
+      parseSavedPositions(
+        localStorage.getItem(modePositionStorageKey(result.config, result.graph.name, nextMode)),
+      ),
       layout.positions,
-      (key) => localStorage.getItem(key),
-      modePositionStorageKey(result.config, result.graph.name, nextMode),
     );
     const projection = projectSemanticGraph(result.graph, nextMode);
     const keepElkPaths = Object.keys(layout.positions).every(

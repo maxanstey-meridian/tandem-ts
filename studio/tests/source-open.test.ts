@@ -1,10 +1,17 @@
 import assert from "node:assert/strict";
-import type { ChildProcess, SpawnOptions } from "node:child_process";
+import { chmod, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 import type { SourceOwnership } from "../src/ownership.js";
 
-// The environment is parsed once at import, so the editor must be configured first.
-process.env.TANDEM_STUDIO_EDITOR = "editor";
+// The environment is parsed once at import, so the stub editor must be configured first.
+const directory = await mkdtemp(join(tmpdir(), "studio-editor-"));
+const editor = join(directory, "editor");
+const invocations = join(directory, "invocations");
+await writeFile(editor, `#!/bin/sh\nprintf '%s\\n' "$@" > '${invocations}'\n`);
+await chmod(editor, 0o755);
+process.env.TANDEM_STUDIO_EDITOR = editor;
 const { openSourceLocation, resolveSourceTarget, SourceTargetSchema } =
   await import("../src/source-open.js");
 
@@ -56,20 +63,15 @@ test("source targets resolve only through validated ownership metadata", () => {
   );
 });
 
-test("source opening launches only the resolved file and line", () => {
-  let invocation: { command: string; args: readonly string[]; options: SpawnOptions } | undefined;
-  const child = { unref() {} } as ChildProcess;
-  openSourceLocation({ file: "/project/pipeline.ts", line: 12 }, ((
-    command: string,
-    args: readonly string[],
-    options: SpawnOptions,
-  ) => {
-    invocation = { command, args, options };
-    return child;
-  }) as typeof import("node:child_process").spawn);
-  assert.deepEqual(invocation, {
-    command: "editor",
-    args: ["/project/pipeline.ts:12"],
-    options: { detached: true, stdio: "ignore" },
-  });
+test("source opening launches only the resolved file and line", async () => {
+  openSourceLocation({ file: "/project/pipeline.ts", line: 12 });
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    try {
+      assert.equal(await readFile(invocations, "utf8"), "/project/pipeline.ts:12\n");
+      return;
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+  }
+  assert.fail("the configured editor was not launched");
 });

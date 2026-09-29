@@ -1,11 +1,12 @@
 import type { PipelineInspection } from "@maxanstey-meridian/tandem";
 import { execFile } from "node:child_process";
-import { access, readFile, writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { format, type FormatConfig } from "oxfmt";
+import { ts } from "ts-morph";
 import { z } from "zod";
 import { loadPipeline, type LoadResult } from "./loader.js";
 import { editRevision, locateOwnership } from "./ownership.js";
@@ -278,21 +279,7 @@ export async function formatSourceText(file: string, source: string): Promise<st
 }
 
 export async function typecheckProject(start: string): Promise<string> {
-  let directory = start,
-    config: string | undefined;
-  for (;;) {
-    const candidate = resolve(directory, "tsconfig.json");
-    try {
-      await access(candidate);
-      config = candidate;
-      break;
-    } catch {}
-    const parent = dirname(directory);
-    if (parent === directory) {
-      break;
-    }
-    directory = parent;
-  }
+  const config = ts.findConfigFile(resolve(start), ts.sys.fileExists);
   if (!config) {
     return "No tsconfig.json was found for save validation.";
   }

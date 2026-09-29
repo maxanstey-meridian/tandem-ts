@@ -1,7 +1,7 @@
 import { outgoingRouteIndexes, resolveRouteBoundary, validateRouteEdit } from "../../src/edit";
 import type { GraphResponse, RouteEditing } from "../../src/graph-response";
-import { editRevision, locateOwnership } from "../../src/ownership";
-import { loadCurrentPipeline } from "../utils/pipeline";
+import { editRevision } from "../../src/ownership";
+import { currentOwnership, loadCurrentPipeline } from "../utils/pipeline";
 
 export default defineEventHandler(async (): Promise<GraphResponse> => {
   try {
@@ -9,7 +9,7 @@ export default defineEventHandler(async (): Promise<GraphResponse> => {
     if (!loaded.ok) {
       return loaded;
     }
-    const ownership = locateOwnership(config, loaded.graph);
+    const ownership = await currentOwnership(config, loaded.graph);
     const indexes = ownership.routes.map((route) =>
       route.editable ? route.sourceIndex : undefined,
     );

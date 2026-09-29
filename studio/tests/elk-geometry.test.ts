@@ -5,12 +5,16 @@ import { mapElkLayout } from "../src/elk-geometry.js";
 test("ELK nodes and routed sections map to Vue Flow positions and orthogonal paths", () => {
   assert.deepEqual(
     mapElkLayout({
+      id: "root",
       children: [{ id: "a", x: 12, y: 34 }],
       edges: [
         {
           id: "route:0",
+          sources: ["port:a"],
+          targets: ["incoming:b"],
           sections: [
             {
+              id: "section:0",
               startPoint: { x: 20, y: 30 },
               bendPoints: [
                 { x: 50, y: 30 },

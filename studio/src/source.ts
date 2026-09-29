@@ -2,12 +2,11 @@ import {
   Project,
   Node,
   QuoteKind,
-  SyntaxKind,
-  type ArrayLiteralExpression,
   type CallExpression,
   type ObjectLiteralExpression,
 } from "ts-morph";
 import { z } from "zod";
+import { pipelineDeclarations } from "./ownership.js";
 
 const RouteOutcomeSchema = z.enum(["success", "failed"]);
 
@@ -49,28 +48,17 @@ export async function editDirectRoute(
     tsConfigFilePath: undefined,
   });
   const source = project.addSourceFileAtPath(file);
-  const arrays = source
-    .getDescendantsOfKind(SyntaxKind.CallExpression)
-    .filter((call) => call.getExpression().getText() === "pipeline")
-    .map((call) => call.getArguments()[0])
-    .filter(Node.isObjectLiteralExpression)
-    .filter((object) => {
-      const property = object.getProperty("name");
-      const initializer = Node.isPropertyAssignment(property)
-        ? property.getInitializer()
-        : undefined;
-      return Node.isStringLiteral(initializer) && initializer.getLiteralValue() === pipelineName;
-    })
+  const arrays = pipelineDeclarations([source], pipelineName)
     .map((object) => object.getProperty("routes"))
     .filter(Node.isPropertyAssignment)
     .map((property) => property.getInitializer())
     .filter(Node.isArrayLiteralExpression);
-  if (arrays.length !== 1) {
+  const [array] = arrays;
+  if (!array || arrays.length !== 1) {
     throw new Error(
       "Routes are read-only: a single direct pipeline routes array could not be identified.",
     );
   }
-  const array = arrays[0] as ArrayLiteralExpression;
   if (edit.kind === "insert") {
     const properties = [
       `from: ${edit.from}`,

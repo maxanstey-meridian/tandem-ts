@@ -1,6 +1,5 @@
-import { locateOwnership } from "../../src/ownership";
 import { openSourceLocation, resolveSourceTarget, SourceTargetSchema } from "../../src/source-open";
-import { loadCurrentPipeline } from "../utils/pipeline";
+import { currentOwnership, loadCurrentPipeline } from "../utils/pipeline";
 
 type OpenResult = { readonly ok: true } | { readonly ok: false; readonly error: string };
 
@@ -10,7 +9,7 @@ export default defineEventHandler(async (event): Promise<OpenResult> => {
   if (!loaded.ok) {
     return loaded;
   }
-  const location = resolveSourceTarget(locateOwnership(config, loaded.graph), target);
+  const location = resolveSourceTarget(await currentOwnership(config, loaded.graph), target);
   if (!location) {
     return { ok: false, error: "This source location is unavailable or ambiguous." };
   }

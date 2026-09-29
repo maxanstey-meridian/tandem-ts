@@ -1,48 +1,35 @@
-export interface ElkPoint {
-  readonly x?: number;
-  readonly y?: number;
-}
-export interface ElkSection {
-  readonly startPoint?: ElkPoint;
-  readonly bendPoints?: readonly ElkPoint[];
-  readonly endPoint?: ElkPoint;
-}
-export interface ElkLayoutResult {
-  readonly children?: readonly { readonly id: string; readonly x?: number; readonly y?: number }[];
-  readonly edges?: readonly { readonly id: string; readonly sections?: readonly ElkSection[] }[];
-}
+import type { ElkEdgeSection, ElkNode, ElkPoint } from "elkjs";
 
-function routedMidpoint(sections: readonly ElkSection[]): { x: number; y: number } | undefined {
+const sectionPoints = (section: ElkEdgeSection): ElkPoint[] => [
+  section.startPoint,
+  ...(section.bendPoints ?? []),
+  section.endPoint,
+];
+
+function routedMidpoint(sections: readonly ElkEdgeSection[]): ElkPoint | undefined {
   const segments = sections.flatMap((section) => {
-    const points = [section.startPoint, ...(section.bendPoints ?? []), section.endPoint].filter(
-      (point): point is ElkPoint => Boolean(point),
-    );
-    return points.slice(1).map((end, index) => {
-      const start = points[index]!;
-      const length = Math.hypot((end.x ?? 0) - (start.x ?? 0), (end.y ?? 0) - (start.y ?? 0));
-      return { start, end, length };
+    const points = sectionPoints(section);
+    return points.slice(1).flatMap((end, index) => {
+      const start = points[index];
+      return start ? [{ start, end, length: Math.hypot(end.x - start.x, end.y - start.y) }] : [];
     });
   });
-  const total = segments.reduce((sum, segment) => sum + segment.length, 0);
-  if (!segments.length) {
+  const last = segments.at(-1);
+  if (!last) {
     return undefined;
   }
-  let remaining = total / 2;
-  for (const segment of segments) {
-    if (remaining <= segment.length) {
-      const ratio = segment.length === 0 ? 0 : remaining / segment.length;
-      return {
-        x: (segment.start.x ?? 0) + ((segment.end.x ?? 0) - (segment.start.x ?? 0)) * ratio,
-        y: (segment.start.y ?? 0) + ((segment.end.y ?? 0) - (segment.start.y ?? 0)) * ratio,
-      };
+  let remaining = segments.reduce((sum, segment) => sum + segment.length, 0) / 2;
+  for (const { start, end, length } of segments) {
+    if (remaining <= length) {
+      const ratio = length === 0 ? 0 : remaining / length;
+      return { x: start.x + (end.x - start.x) * ratio, y: start.y + (end.y - start.y) * ratio };
     }
-    remaining -= segment.length;
+    remaining -= length;
   }
-  const end = segments.at(-1)!.end;
-  return { x: end.x ?? 0, y: end.y ?? 0 };
+  return { x: last.end.x, y: last.end.y };
 }
 
-export function mapElkLayout(result: ElkLayoutResult) {
+export function mapElkLayout(result: ElkNode) {
   const positions = Object.fromEntries(
     (result.children ?? []).map((node) => [node.id, { x: node.x ?? 0, y: node.y ?? 0 }]),
   );
@@ -53,16 +40,11 @@ export function mapElkLayout(result: ElkLayoutResult) {
         return [];
       }
       const path = sections
-        .map((section) => {
-          const points = [
-            section.startPoint,
-            ...(section.bendPoints ?? []),
-            section.endPoint,
-          ].filter((point): point is ElkPoint => Boolean(point));
-          return points
-            .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x ?? 0} ${point.y ?? 0}`)
-            .join(" ");
-        })
+        .map((section) =>
+          sectionPoints(section)
+            .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
+            .join(" "),
+        )
         .join(" ");
       return [[edge.id, path] as const];
     }),
