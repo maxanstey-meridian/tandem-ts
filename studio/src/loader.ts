@@ -3,6 +3,7 @@ import { fork } from "node:child_process";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { studioEnv } from "./env.js";
 
 const require = createRequire(import.meta.url);
 export type LoadResult =
@@ -20,7 +21,7 @@ export function loadPipeline(config: string, options: LoadOptions = {}): Promise
     }
     const sourceMode = fileURLToPath(import.meta.url).endsWith(".ts");
     const child = fork(
-      process.env.TANDEM_STUDIO_LOADER_CHILD ??
+      studioEnv.loaderChild ??
         resolve(
           dirname(fileURLToPath(import.meta.url)),
           sourceMode ? "loader-child.ts" : "loader-child.js",
@@ -28,7 +29,6 @@ export function loadPipeline(config: string, options: LoadOptions = {}): Promise
       [config],
       {
         cwd: dirname(config),
-        env: process.env,
         silent: true,
         ...(sourceMode ? { execArgv: ["--import", require.resolve("tsx")] } : {}),
       },

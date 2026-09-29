@@ -7,28 +7,37 @@ import {
   type CallExpression,
   type ObjectLiteralExpression,
 } from "ts-morph";
+import { z } from "zod";
 
-export type RouteEdit =
-  | { kind: "delete"; order: number }
-  | { kind: "move"; order: number; toOrder: number }
-  | {
-      kind: "update";
-      order: number;
-      from?: string;
-      to?: string;
-      label?: string;
-      outcome?: "success" | "failed" | null;
-      when?: string | null;
-    }
-  | {
-      kind: "insert";
-      order: number;
-      from: string;
-      to: string;
-      label: string;
-      outcome?: "success" | "failed";
-      when?: string;
-    };
+const RouteOutcomeSchema = z.enum(["success", "failed"]);
+
+export const RouteEditSchema = z.discriminatedUnion("kind", [
+  z.strictObject({ kind: z.literal("delete"), order: z.number().int().nonnegative() }),
+  z.strictObject({
+    kind: z.literal("move"),
+    order: z.number().int().nonnegative(),
+    toOrder: z.number().int().nonnegative(),
+  }),
+  z.strictObject({
+    kind: z.literal("update"),
+    order: z.number().int().nonnegative(),
+    from: z.string().optional(),
+    to: z.string().optional(),
+    label: z.string().optional(),
+    outcome: RouteOutcomeSchema.nullable().optional(),
+    when: z.string().nullable().optional(),
+  }),
+  z.strictObject({
+    kind: z.literal("insert"),
+    order: z.number().int().nonnegative(),
+    from: z.string(),
+    to: z.string(),
+    label: z.string(),
+    outcome: RouteOutcomeSchema.optional(),
+    when: z.string().optional(),
+  }),
+]);
+export type RouteEdit = z.infer<typeof RouteEditSchema>;
 
 export async function editDirectRoute(
   file: string,

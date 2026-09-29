@@ -1,15 +1,10 @@
-import { discoverConfig } from "../../src/discovery";
-import { loadPipeline } from "../../src/loader";
 import { locateOwnership } from "../../src/ownership";
-import { openSourceLocation, parseSourceTarget, resolveSourceTarget } from "../../src/source-open";
+import { openSourceLocation, resolveSourceTarget, SourceTargetSchema } from "../../src/source-open";
+import { loadCurrentPipeline } from "../utils/pipeline";
 
 export default defineEventHandler(async (event) => {
-  const target = parseSourceTarget(await readBody(event));
-  const config = await discoverConfig(
-    process.env.TANDEM_STUDIO_CWD ?? process.cwd(),
-    process.env.TANDEM_STUDIO_CONFIG,
-  );
-  const loaded = await loadPipeline(config);
+  const target = await readValidatedBody(event, SourceTargetSchema.parse);
+  const { config, loaded } = await loadCurrentPipeline();
   if (!loaded.ok) {
     return loaded;
   }

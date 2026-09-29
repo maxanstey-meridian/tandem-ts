@@ -5,6 +5,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseStudioArguments } from "./cli-args.js";
 import { discoverConfig } from "./discovery.js";
+import { studioServerEnvironment } from "./env.js";
 
 try {
   const { config: explicit } = parseStudioArguments(process.argv.slice(2));
@@ -19,12 +20,7 @@ try {
   const nuxt = resolve(dirname(require.resolve("nuxt/package.json")), "bin/nuxt.mjs");
   const child = spawn(process.execPath, [nuxt, "dev", root], {
     stdio: "inherit",
-    env: {
-      ...process.env,
-      TANDEM_STUDIO_CWD: process.cwd(),
-      TANDEM_STUDIO_CONFIG: config,
-      TANDEM_STUDIO_LOADER_CHILD: loaderChild,
-    },
+    env: studioServerEnvironment({ cwd: process.cwd(), config, loaderChild }),
   });
   for (const signal of ["SIGINT", "SIGTERM"] as const) {
     process.once(signal, () => child.kill(signal));

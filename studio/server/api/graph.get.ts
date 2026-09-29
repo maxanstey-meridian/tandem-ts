@@ -1,14 +1,10 @@
-import { discoverConfig } from "../../src/discovery";
 import { outgoingRouteIndexes, resolveRouteBoundary, validateRouteEdit } from "../../src/edit";
-import { loadPipeline } from "../../src/loader";
 import { editRevision, locateOwnership } from "../../src/ownership";
+import { loadCurrentPipeline } from "../utils/pipeline";
+
 export default defineEventHandler(async () => {
   try {
-    const config = await discoverConfig(
-      process.env.TANDEM_STUDIO_CWD ?? process.cwd(),
-      process.env.TANDEM_STUDIO_CONFIG,
-    );
-    const loaded = await loadPipeline(config);
+    const { config, loaded } = await loadCurrentPipeline();
     if (!loaded.ok) {
       return { config, ...loaded };
     }
@@ -62,6 +58,7 @@ export default defineEventHandler(async () => {
           const edit = validateRouteEdit({ kind: "move", order: from, toOrder }, loaded.graph);
           return (
             source !== undefined &&
+            edit.kind === "move" &&
             safe(
               indexes.filter((__, index) => index !== from),
               edit.toOrder,

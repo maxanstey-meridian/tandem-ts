@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import type { ChildProcess, SpawnOptions } from "node:child_process";
 import test from "node:test";
 import type { SourceOwnership } from "../src/ownership.js";
-import { openSourceLocation, parseSourceTarget, resolveSourceTarget } from "../src/source-open.js";
+
+// The environment is parsed once at import, so the editor must be configured first.
+process.env.TANDEM_STUDIO_EDITOR = "editor";
+const { openSourceLocation, resolveSourceTarget, SourceTargetSchema } =
+  await import("../src/source-open.js");
 
 const ownership: SourceOwnership = {
   routeArray: { file: "/project/pipeline.ts", line: 8, length: 1 },
@@ -21,21 +25,21 @@ const ownership: SourceOwnership = {
 
 test("source targets resolve only through validated ownership metadata", () => {
   assert.deepEqual(
-    resolveSourceTarget(ownership, parseSourceTarget({ kind: "state" })),
+    resolveSourceTarget(ownership, SourceTargetSchema.parse({ kind: "state" })),
     ownership.state,
   );
   assert.deepEqual(
-    resolveSourceTarget(ownership, parseSourceTarget({ kind: "participant", id: "review" })),
+    resolveSourceTarget(ownership, SourceTargetSchema.parse({ kind: "participant", id: "review" })),
     { file: "/project/pipeline.ts", line: 10 },
   );
   assert.deepEqual(
     resolveSourceTarget(
       ownership,
-      parseSourceTarget({ kind: "callback", id: "review", name: "execute" }),
+      SourceTargetSchema.parse({ kind: "callback", id: "review", name: "execute" }),
     ),
     { file: "/project/pipeline.ts", line: 12 },
   );
-  assert.deepEqual(resolveSourceTarget(ownership, parseSourceTarget({ kind: "route", order: 0 })), {
+  assert.deepEqual(resolveSourceTarget(ownership, SourceTargetSchema.parse({ kind: "route", order: 0 })), {
     file: "/project/pipeline.ts",
     line: 20,
   });
@@ -44,14 +48,12 @@ test("source targets resolve only through validated ownership metadata", () => {
     undefined,
   );
   assert.throws(
-    () => parseSourceTarget({ kind: "route", order: 0, file: "/etc/passwd" }),
-    /Invalid source target/,
+    () => SourceTargetSchema.parse({ kind: "route", order: 0, file: "/etc/passwd" }),
+    /Unrecognized key/,
   );
 });
 
 test("source opening launches only the resolved file and line", () => {
-  const previous = process.env.TANDEM_STUDIO_EDITOR;
-  process.env.TANDEM_STUDIO_EDITOR = "editor";
   let invocation: { command: string; args: readonly string[]; options: SpawnOptions } | undefined;
   const child = { unref() {} } as ChildProcess;
   openSourceLocation({ file: "/project/pipeline.ts", line: 12 }, ((
@@ -67,9 +69,4 @@ test("source opening launches only the resolved file and line", () => {
     args: ["/project/pipeline.ts:12"],
     options: { detached: true, stdio: "ignore" },
   });
-  if (previous === undefined) {
-    delete process.env.TANDEM_STUDIO_EDITOR;
-  } else {
-    process.env.TANDEM_STUDIO_EDITOR = previous;
-  }
 });
