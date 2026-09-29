@@ -1,6 +1,6 @@
 import type { PipelineInspection } from "@maxanstey-meridian/tandem";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -279,4 +279,23 @@ test("ambiguous aliases fail closed and semantic requirements are validated", as
       ),
     /terminal/,
   );
+});
+
+test("ownership scanning skips node_modules, including workspace links back into the project", async () => {
+  const workspace = await mkdtemp(join(tmpdir(), "ownership-linked-")),
+    root = join(workspace, "examples", "app"),
+    config = join(root, "tandem.config.ts");
+  await mkdir(root, { recursive: true });
+  await writeFile(
+    config,
+    'const first = stage({ id: "runtime-a" }); const done = output({ id: "runtime-b" }); pipeline({ name: "owned", state: schema, nodes: [first, done], start: first, routes: [route({ from: first, to: done, label: "go" })], outputs: [done] });',
+  );
+  // pnpm workspaces link each example's SDK dependency back to the repository root.
+  for (const example of ["app", "other"]) {
+    const scope = join(workspace, "examples", example, "node_modules", "@scope");
+    await mkdir(scope, { recursive: true });
+    await symlink("../../../..", join(scope, "sdk"), "dir");
+  }
+
+  assert.equal(locateOwnership(config, graph).routes[0]?.editable, true);
 });

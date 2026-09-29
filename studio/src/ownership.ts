@@ -1,5 +1,6 @@
 import type { PipelineInspection } from "@maxanstey-meridian/tandem";
-import { dirname, join } from "node:path";
+import { globSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
 import {
   Node,
   Project,
@@ -61,10 +62,15 @@ export function pipelineDeclarations(
 
 export function locateOwnership(config: string, graph: PipelineInspection): SourceOwnership {
   const project = new Project({ skipAddingFilesFromTsConfig: true });
-  project.addSourceFilesAtPaths([
-    join(dirname(config), "**/*.ts"),
-    `!${join(dirname(config), "**/node_modules/**")}`,
-  ]);
+  const root = dirname(config);
+  // ts-morph's glob walks every directory before applying negations, so pnpm workspace links
+  // back into the repository recurse without end; node_modules must be pruned during the walk.
+  for (const file of globSync("**/*.ts", {
+    cwd: root,
+    exclude: (path) => basename(path) === "node_modules",
+  })) {
+    project.addSourceFileAtPath(join(root, file));
+  }
   const candidates: { array: ArrayLiteralExpression; object: ObjectLiteralExpression }[] = [];
   const pipelineCandidates: { routes: PropertyAssignment }[] = [];
   for (const object of pipelineDeclarations(project.getSourceFiles(), graph.name)) {
