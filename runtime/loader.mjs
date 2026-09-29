@@ -2,8 +2,8 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const platforms = {
-  "darwin-arm64": "./darwin-arm64/Tandem.NodeApiSpike.Bridge.mjs",
-  "linux-x64": "./linux-x64/Tandem.NodeApiSpike.Bridge.mjs",
+  "darwin-arm64": "./darwin-arm64/Tandem.Bridge.mjs",
+  "linux-x64": "./linux-x64/Tandem.Bridge.mjs",
 };
 
 const platform = `${process.platform}-${process.arch}`;

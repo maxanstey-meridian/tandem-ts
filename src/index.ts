@@ -131,44 +131,6 @@ class CallbackRegistry {
   }
 }
 
-// The bridge surfaces JS callback errors and .NET cancellations only as exception message text,
-// so these markers are how a failure's origin is recovered (until the bridge returns structured
-// errors).
-const CALLBACK_CONTRACT_MARKER = "TANDEM_CALLBACK_CONTRACT:";
-const CALLBACK_FAILURE_MARKER = "JavaScript callback failed:";
-const BRIDGE_CANCELLATION_MESSAGE = /\boperation was (?:cancell?ed|aborted)\b/i;
-
-const callbackFailureSchema = z.object({
-  boundary: z.string(),
-  problems: z.array(z.object({ path: z.string(), message: z.string() })),
-});
-function callbackContractFailure(error: unknown): z.infer<typeof callbackFailureSchema> | null {
-  const message = error instanceof Error ? error.message : String(error);
-  const start = message.indexOf(CALLBACK_CONTRACT_MARKER);
-  if (start < 0) {
-    return null;
-  }
-  try {
-    const failure = callbackFailureSchema.safeParse(
-      JSON.parse(message.slice(start + CALLBACK_CONTRACT_MARKER.length)),
-    );
-    return failure.success ? failure.data : null;
-  } catch {
-    return null;
-  }
-}
-
-function isCancellation(error: unknown, signal: AbortSignal | undefined): boolean {
-  if (signal?.aborted) {
-    return true;
-  }
-  return (
-    error instanceof Error &&
-    !error.message.includes(CALLBACK_FAILURE_MARKER) &&
-    (error.name === "AbortError" || BRIDGE_CANCELLATION_MESSAGE.test(error.message))
-  );
-}
-
 function path(parts: PropertyKey[]): string {
   return parts.length === 0
     ? "$"
@@ -1378,14 +1340,30 @@ const acceptedValuesSchema = z.array(
     message: "valueType and payload cannot both be null",
   }),
 );
-const runResultSchema = z
-  .object({
-    runId: z.uuid(),
-    succeeded: z.boolean(),
-    state: z.unknown(),
-    summary: z.string().nullable(),
-  })
-  .strict();
+const validationProblemsSchema = z.array(
+  z.object({ path: z.string(), message: z.string() }).strict(),
+);
+/** How the bridge reports the end of a run; only a bridge defect rejects instead. */
+const runEnvelopeSchema = z.discriminatedUnion("status", [
+  z
+    .object({
+      status: z.enum(["succeeded", "failed"]),
+      runId: z.uuid(),
+      state: z.unknown(),
+      summary: z.string().nullable(),
+    })
+    .strict(),
+  z.object({ status: z.literal("cancelled"), runId: z.uuid() }).strict(),
+  z
+    .object({
+      status: z.literal("contract"),
+      runId: z.uuid(),
+      boundary: z.string(),
+      problems: validationProblemsSchema,
+    })
+    .strict(),
+  z.object({ status: z.literal("faulted"), runId: z.uuid(), message: z.string() }).strict(),
+]);
 
 /** Lazy (and cached by the module loader) so importing the authoring API never starts .NET. */
 const loadRuntime = () => import("./runtime/loader.mjs");
@@ -1500,18 +1478,26 @@ export async function run<TState>(
         callbacks.invoke(id, state, input, signal),
       options.signal,
     );
-    const result = parseJson(runResultSchema, resultJson, "run result");
-    return { ...result, state: parse(graph.state, result.state, "final state") };
+    const envelope = parseJson(runEnvelopeSchema, resultJson, "run result");
+    switch (envelope.status) {
+      case "succeeded":
+      case "failed":
+        return {
+          runId: envelope.runId,
+          succeeded: envelope.status === "succeeded",
+          state: parse(graph.state, envelope.state, "final state"),
+          summary: envelope.summary,
+        };
+      case "cancelled":
+        throw new TandemCancellationError(new Error("The run was cancelled."));
+      case "contract":
+        throw new ContractValidationError(envelope.boundary, envelope.problems);
+      case "faulted":
+        throw new TandemRuntimeError("run", new Error(envelope.message));
+    }
   } catch (error) {
     if (error instanceof TandemError) {
       throw error;
-    }
-    const callbackFailure = callbackContractFailure(error);
-    if (callbackFailure) {
-      throw new ContractValidationError(callbackFailure.boundary, callbackFailure.problems);
-    }
-    if (isCancellation(error, options.signal)) {
-      throw new TandemCancellationError(error);
     }
     throw new TandemRuntimeError("run", error);
   } finally {
@@ -1538,9 +1524,6 @@ function issues<T>(schema: z.ZodType<T>, input: string): string {
     throw error;
   }
 }
-const validationProblemsSchema = z.array(
-  z.object({ path: z.string(), message: z.string() }).strict(),
-);
 function validationProblems(problems: readonly ValidationProblem[], boundary: string): string {
   return JSON.stringify(parse(validationProblemsSchema, problems, boundary));
 }
