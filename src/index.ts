@@ -3,6 +3,7 @@ import { z } from "zod";
 
 type SyncCallback = (state: string, input: string) => string;
 type AsyncCallback = (state: string, input: string, signal: AbortSignal) => Promise<string>;
+type Callback = (state: string, input: string, signal: AbortSignal) => string | Promise<string>;
 const participantBrand: unique symbol = Symbol("participant");
 const compileCapabilityBrand: unique symbol = Symbol("compileCapability");
 const interactionHandlersBrand: unique symbol = Symbol("interactionHandlers");
@@ -52,10 +53,6 @@ export type ValidationProblem = {
   readonly message: string;
 };
 
-type CallbackFailure = {
-  readonly boundary: string;
-  readonly problems: readonly ValidationProblem[];
-};
 type CallbackResult =
   | { readonly succeeded: true; readonly value: string }
   | {
@@ -68,119 +65,107 @@ type CallbackResult =
       };
     };
 
-function callbackError(error: unknown): Extract<CallbackResult, { succeeded: false }>["error"] {
-  return error instanceof ContractValidationError
-    ? {
-        name: error.name,
-        message: error.message,
-        boundary: error.boundary,
-        problems: error.problems,
-      }
-    : {
-        name: error instanceof Error ? error.name : "Error",
-        message: error instanceof Error ? error.message : String(error),
-      };
-}
+const callbackSucceeded = (value: string): string =>
+  JSON.stringify({ succeeded: true, value } satisfies CallbackResult);
+const callbackFailed = (error: unknown): string =>
+  JSON.stringify({
+    succeeded: false,
+    error:
+      error instanceof ContractValidationError
+        ? {
+            name: error.name,
+            message: error.message,
+            boundary: error.boundary,
+            problems: error.problems,
+          }
+        : {
+            name: error instanceof Error ? error.name : "Error",
+            message: error instanceof Error ? error.message : String(error),
+          },
+  } satisfies CallbackResult);
+
+/** Synchronous callbacks cannot observe cancellation; they receive a signal that never aborts. */
+const neverAborted = new AbortController().signal;
 
 class CallbackRegistry {
-  readonly #sync = new Map<string, SyncCallback>();
-  readonly #async = new Map<string, AsyncCallback>();
+  readonly #callbacks = new Map<string, Callback>();
   #next = 0;
   #disposed = false;
 
   registerSync(callback: SyncCallback): string {
-    const id = this.#allocate();
-    this.#sync.set(id, callback);
-    return id;
+    return this.#register(callback);
   }
 
   registerAsync(callback: AsyncCallback): string {
-    const id = this.#allocate();
-    this.#async.set(id, callback);
-    return id;
+    return this.#register(callback);
   }
 
-  invokeSync(id: string, state: string, input: string): string {
+  /** Never throws: failures travel back to the bridge as an encoded `CallbackResult`. */
+  invoke(id: string, state: string, input: string, signal: AbortSignal): string | Promise<string> {
     try {
-      const callback = this.#sync.get(id);
+      const callback = this.#callbacks.get(id);
       if (!callback) {
         throw new Error(`Unknown internal callback '${id}'.`);
       }
-      return JSON.stringify({
-        succeeded: true,
-        value: callback(state, input),
-      } satisfies CallbackResult);
+      const value = callback(state, input, signal);
+      return typeof value === "string"
+        ? callbackSucceeded(value)
+        : value.then(callbackSucceeded, callbackFailed);
     } catch (error) {
-      return JSON.stringify({
-        succeeded: false,
-        error: callbackError(error),
-      } satisfies CallbackResult);
-    }
-  }
-
-  async invokeAsync(
-    id: string,
-    state: string,
-    input: string,
-    signal: AbortSignal,
-  ): Promise<string> {
-    try {
-      const callback = this.#async.get(id);
-      if (!callback) {
-        throw new Error(`Unknown internal async callback '${id}'.`);
-      }
-      return JSON.stringify({
-        succeeded: true,
-        value: await callback(state, input, signal),
-      } satisfies CallbackResult);
-    } catch (error) {
-      return JSON.stringify({
-        succeeded: false,
-        error: callbackError(error),
-      } satisfies CallbackResult);
+      return callbackFailed(error);
     }
   }
 
   dispose(): void {
     this.#disposed = true;
-    this.#sync.clear();
-    this.#async.clear();
+    this.#callbacks.clear();
   }
 
-  #allocate(): string {
+  #register(callback: Callback): string {
     if (this.#disposed) {
       throw new Error("Callback registry has been disposed.");
     }
-    return `c${this.#next++}`;
+    const id = `c${this.#next++}`;
+    this.#callbacks.set(id, callback);
+    return id;
   }
 }
 
-function callbackContractFailure(error: unknown): CallbackFailure | null {
-  const marker = "TANDEM_CALLBACK_CONTRACT:";
+// The bridge surfaces JS callback errors and .NET cancellations only as exception message text,
+// so these markers are how a failure's origin is recovered (until the bridge returns structured
+// errors).
+const CALLBACK_CONTRACT_MARKER = "TANDEM_CALLBACK_CONTRACT:";
+const CALLBACK_FAILURE_MARKER = "JavaScript callback failed:";
+const BRIDGE_CANCELLATION_MESSAGE = /\boperation was (?:cancell?ed|aborted)\b/i;
+
+const callbackFailureSchema = z.object({
+  boundary: z.string(),
+  problems: z.array(z.object({ path: z.string(), message: z.string() })),
+});
+function callbackContractFailure(error: unknown): z.infer<typeof callbackFailureSchema> | null {
   const message = error instanceof Error ? error.message : String(error);
-  const start = message.indexOf(marker);
+  const start = message.indexOf(CALLBACK_CONTRACT_MARKER);
   if (start < 0) {
     return null;
   }
   try {
-    return JSON.parse(message.slice(start + marker.length)) as CallbackFailure;
+    const failure = callbackFailureSchema.safeParse(
+      JSON.parse(message.slice(start + CALLBACK_CONTRACT_MARKER.length)),
+    );
+    return failure.success ? failure.data : null;
   } catch {
     return null;
   }
 }
 
-function isCancellationError(error: unknown, signalAborted: boolean): boolean {
-  if (!(error instanceof Error)) {
-    return false;
-  }
-  if (error.message.includes("JavaScript callback failed:") && !signalAborted) {
-    return false;
+function isCancellation(error: unknown, signal: AbortSignal | undefined): boolean {
+  if (signal?.aborted) {
+    return true;
   }
   return (
-    error.name === "AbortError" ||
-    /\b(?:operation was cancel(?:l)?ed|operation was aborted|this operation was aborted)\b/i.test(
-      error.message,
-    )
+    error instanceof Error &&
+    !error.message.includes(CALLBACK_FAILURE_MARKER) &&
+    (error.name === "AbortError" || BRIDGE_CANCELLATION_MESSAGE.test(error.message))
   );
 }
 
@@ -1488,9 +1473,14 @@ export async function run<TState>(
         outputs: graph.outputs.map((item) => item.id),
         interactionHandlers,
       }),
-      (id: string, state: string, input: string) => callbacks.invokeSync(id, state, input),
-      (id: string, state: string, input: string, signal: AbortSignal) =>
-        callbacks.invokeAsync(id, state, input, signal),
+      (id: string, state: string, input: string) => {
+        const result = callbacks.invoke(id, state, input, neverAborted);
+        return typeof result === "string"
+          ? result
+          : callbackFailed(new Error(`Internal callback '${id}' is asynchronous.`));
+      },
+      async (id: string, state: string, input: string, signal: AbortSignal) =>
+        callbacks.invoke(id, state, input, signal),
       options.signal,
     );
     const result = parseJson(runResultSchema, resultJson, "run result");
@@ -1503,7 +1493,7 @@ export async function run<TState>(
     if (callbackFailure) {
       throw new ContractValidationError(callbackFailure.boundary, callbackFailure.problems);
     }
-    if (isCancellationError(error, options.signal?.aborted === true)) {
+    if (isCancellation(error, options.signal)) {
       throw new TandemCancellationError(error);
     }
     throw new TandemRuntimeError("run", error);
