@@ -69,7 +69,12 @@ try {
       try {
         if (mode === "cancel" && entered === 3) controller.abort();
         if (mode === "failure" && item === "0") throw new Error("item failed");
-        await delay(item === "0" ? 80 : 5, undefined, { signal: context.signal });
+        // A failure or abort reaches .NET asynchronously. Until the collection stops them, items
+        // must not finish, or a freed slot could start a fourth item before the stop arrives.
+        const stopping = mode === "cancel" || mode === "failure";
+        await delay(stopping ? 60_000 : item === "0" ? 80 : 5, undefined, {
+          signal: context.signal,
+        });
         if (mode === "undeclared") {
           const undeclared = taskAgent({
             id: "other",
