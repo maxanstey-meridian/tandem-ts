@@ -385,32 +385,21 @@ type Node<TState> =
   | Parallel<TState>
   | Terminal<TState>;
 
-abstract class NodeImplementation<TState> implements Participant<TState> {
-  readonly [participantBrand]!: (state: TState) => TState;
-  constructor(
-    readonly id: string,
-    readonly persist?: boolean,
-  ) {}
-}
-class StageImplementation<TState> extends NodeImplementation<TState> implements Stage<TState> {
-  readonly kind = "stage";
-  constructor(
-    id: string,
-    persist: boolean | undefined,
-    readonly execute: (
-      state: TState,
-      context: { readonly signal: AbortSignal },
-    ) => TState | Promise<TState>,
-  ) {
-    super(id, persist);
-  }
-}
-export function stage<TState>(definition: {
+type StageDefinition<TState> = {
   id: string;
   execute: (state: TState, context: { readonly signal: AbortSignal }) => TState | Promise<TState>;
   persist?: boolean;
-}): Stage<TState> {
-  return new StageImplementation(definition.id, definition.persist, definition.execute);
+};
+type StageRecord<TState> = Stage<TState> & StageDefinition<TState>;
+/** The participant brand only pins `TState` for the type checker; `kind` identifies records at runtime. */
+const keepState = <TState>(state: TState): TState => state;
+export function stage<TState>(definition: StageDefinition<TState>): Stage<TState> {
+  const record: StageRecord<TState> = {
+    ...definition,
+    [participantBrand]: keepState,
+    kind: "stage",
+  };
+  return Object.freeze(record);
 }
 
 const taskAgentBrand: unique symbol = Symbol("taskAgent");
@@ -430,33 +419,10 @@ export interface Collection<TState> extends Participant<TState> {
   readonly kind: "collection";
 }
 type TaskState<TInput, TOutput> = { input: TInput; output: { value: TOutput } | null };
-class TaskAgentImplementation<TInput, TOutput> implements TaskAgent<TInput, TOutput> {
-  readonly [taskAgentBrand] = true as const;
+type TaskAgentRecord<TInput, TOutput> = TaskAgent<TInput, TOutput> & {
   readonly state: z.ZodType<TaskState<TInput, TOutput>>;
   readonly participant: Agent<TaskState<TInput, TOutput>>;
-  constructor(
-    readonly id: string,
-    readonly input: z.ZodType<TInput>,
-    readonly result: z.ZodType<TOutput>,
-    definition: TaskAgentDefinition<TInput, TOutput>,
-  ) {
-    this.state = z.object({ input, output: z.object({ value: result }).nullable() });
-    this.participant = agent<TaskState<TInput, TOutput>, TOutput>({
-      ...definition,
-      message: (state) => definition.message(state.input),
-      output: {
-        ...definition.output,
-        validateFor: definition.output.validateFor
-          ? (state, value) => definition.output.validateFor!(state.input, value)
-          : undefined,
-        apply: (state: TaskState<TInput, TOutput>, value: TOutput) => ({
-          ...state,
-          output: { value },
-        }),
-      },
-    });
-  }
-}
+};
 export interface TaskAgentDefinition<TInput, TOutput> extends Omit<
   AgentDefinition<TInput, TOutput>,
   "output" | "capabilities" | "workspace" | "checkpoint"
@@ -476,12 +442,36 @@ export interface TaskAgentDefinition<TInput, TOutput> extends Omit<
 export function taskAgent<TInput, TOutput>(
   definition: TaskAgentDefinition<TInput, TOutput>,
 ): TaskAgent<TInput, TOutput> {
-  return new TaskAgentImplementation(
-    definition.id,
-    definition.input,
-    definition.result,
-    definition,
-  );
+  const { validateFor } = definition.output;
+  const record: TaskAgentRecord<TInput, TOutput> = {
+    [taskAgentBrand]: true,
+    id: definition.id,
+    input: definition.input,
+    result: definition.result,
+    state: z.object({
+      input: definition.input,
+      output: z.object({ value: definition.result }).nullable(),
+    }),
+    participant: agent<TaskState<TInput, TOutput>, TOutput>({
+      ...definition,
+      message: (state) => definition.message(state.input),
+      output: {
+        ...definition.output,
+        validateFor: validateFor ? (state, value) => validateFor(state.input, value) : undefined,
+        apply: (state, value) => ({ ...state, output: { value } }),
+      },
+    }),
+  };
+  return Object.freeze(record);
+}
+/** Task agents are only created by `taskAgent()`, whose record is the returned object. */
+function taskAgentRecord<TInput, TOutput>(
+  reference: TaskAgentReference | TaskAgent<TInput, TOutput>,
+): TaskAgentRecord<TInput, TOutput> {
+  if (!("participant" in reference)) {
+    throw new TandemError("Use taskAgent to declare collection agents.");
+  }
+  return reference as TaskAgentRecord<TInput, TOutput>;
 }
 interface CollectionDefinition<TState, TItem, TResult> {
   id: string;
@@ -494,15 +484,8 @@ interface CollectionDefinition<TState, TItem, TResult> {
   max: number;
   persist?: boolean;
 }
-class CollectionImplementation<TState, TItem, TResult>
-  extends NodeImplementation<TState>
-  implements Collection<TState>
-{
-  readonly kind = "collection";
-  constructor(readonly definition: CollectionDefinition<TState, TItem, TResult>) {
-    super(definition.id, definition.persist);
-  }
-}
+type CollectionRecord<TState, TItem, TResult> = Collection<TState> &
+  CollectionDefinition<TState, TItem, TResult>;
 const collectionOptionsSchema = z.object({
   max: positiveInt32,
   agents: z
@@ -513,27 +496,21 @@ export function collection<TState, TItem, TResult>(
   definition: CollectionDefinition<TState, TItem, TResult>,
 ): Collection<TState> {
   parseDefinition(collectionOptionsSchema, definition, `Collection '${definition.id}'`);
-  return new CollectionImplementation(definition);
+  const record: CollectionRecord<TState, TItem, TResult> = {
+    ...definition,
+    [participantBrand]: keepState,
+    kind: "collection",
+  };
+  return Object.freeze(record);
 }
 
-class InteractionImplementation<TState, TRequest, TResponse>
-  extends NodeImplementation<TState>
-  implements Interaction<TState, TRequest, TResponse>
-{
-  readonly kind = "interaction";
-  readonly requestType?: TRequest;
-  readonly responseType?: TResponse;
-  constructor(
-    id: string,
-    persist: boolean | undefined,
-    readonly requestSchema: z.ZodType<TRequest>,
-    readonly responseSchema: z.ZodType<TResponse>,
-    readonly request: (state: TState) => TRequest,
-    readonly apply: (state: TState, response: TResponse) => TState,
-  ) {
-    super(id, persist);
-  }
-}
+type InteractionRecord<TState, TRequest, TResponse> = Interaction<TState, TRequest, TResponse> & {
+  readonly requestSchema: z.ZodType<TRequest>;
+  readonly responseSchema: z.ZodType<TResponse>;
+  readonly request: (state: TState) => TRequest;
+  readonly apply: (state: TState, response: TResponse) => TState;
+  readonly persist?: boolean;
+};
 export function interaction<TState, TRequest, TResponse>(definition: {
   id: string;
   requestSchema: z.ZodType<TRequest>;
@@ -542,14 +519,12 @@ export function interaction<TState, TRequest, TResponse>(definition: {
   apply: (state: TState, response: TResponse) => TState;
   persist?: boolean;
 }): Interaction<TState, TRequest, TResponse> {
-  return new InteractionImplementation(
-    definition.id,
-    definition.persist,
-    definition.requestSchema,
-    definition.responseSchema,
-    definition.request,
-    definition.apply,
-  );
+  const record: InteractionRecord<TState, TRequest, TResponse> = {
+    ...definition,
+    [participantBrand]: keepState,
+    kind: "interaction",
+  };
+  return Object.freeze(record);
 }
 
 type InteractionHandler<TRequest, TResponse> = (
@@ -557,7 +532,7 @@ type InteractionHandler<TRequest, TResponse> = (
   context: { readonly signal: AbortSignal },
 ) => TResponse | Promise<TResponse>;
 type RegisteredInteractionHandler = {
-  readonly interaction: Interaction<unknown, unknown, unknown>;
+  readonly interaction: InteractionRecord<unknown, unknown, unknown>;
   readonly handle: InteractionHandler<unknown, unknown>;
 };
 export interface InteractionHandlers {
@@ -567,29 +542,25 @@ export interface InteractionHandlers {
   ): InteractionHandlers;
   readonly [interactionHandlersBrand]: true;
 }
-class InteractionHandlersImplementation implements InteractionHandlers {
-  readonly [interactionHandlersBrand] = true;
-  readonly entries: RegisteredInteractionHandler[] = [];
-  readonly #interactions = new Set<Interaction<unknown, unknown, unknown>>();
-
-  handle<TState, TRequest, TResponse>(
-    interaction: Interaction<TState, TRequest, TResponse>,
-    handler: InteractionHandler<TRequest, TResponse>,
-  ): InteractionHandlers {
-    const opaque = interaction as Interaction<unknown, unknown, unknown>;
-    if (this.#interactions.has(opaque)) {
-      throw new TandemError(`Interaction '${interaction.id}' already has a handler.`);
-    }
-    this.#interactions.add(opaque);
-    this.entries.push({
-      interaction: opaque,
-      handle: handler as InteractionHandler<unknown, unknown>,
-    });
-    return this;
-  }
-}
+const registeredHandlers = new WeakMap<InteractionHandlers, RegisteredInteractionHandler[]>();
 export function interactions(): InteractionHandlers {
-  return new InteractionHandlersImplementation();
+  const entries: RegisteredInteractionHandler[] = [];
+  const handlers: InteractionHandlers = {
+    [interactionHandlersBrand]: true,
+    handle(interaction, handler) {
+      if (entries.some((entry) => entry.interaction === interaction)) {
+        throw new TandemError(`Interaction '${interaction.id}' already has a handler.`);
+      }
+      entries.push({
+        // An interaction is the record `interaction()` built; its types are erased for storage.
+        interaction: interaction as InteractionRecord<unknown, unknown, unknown>,
+        handle: handler as InteractionHandler<unknown, unknown>,
+      });
+      return handlers;
+    },
+  };
+  registeredHandlers.set(handlers, entries);
+  return Object.freeze(handlers);
 }
 
 interface CapabilityCompileContext<TState> {
@@ -601,62 +572,8 @@ export interface Capability<TState> {
   readonly name: string;
   readonly [compileCapabilityBrand]: (context: CapabilityCompileContext<TState>) => object;
 }
-class CapabilityImplementation<TState, TRequest> implements Capability<TState> {
-  readonly requestJsonSchema: string;
-  constructor(
-    readonly name: string,
-    readonly instructions: string,
-    readonly schema: z.ZodType<TRequest>,
-    readonly validateFor:
-      | ((state: TState, request: TRequest) => readonly ValidationProblem[])
-      | undefined,
-    readonly apply: (state: TState, request: TRequest) => TState,
-    readonly summarize: (request: TRequest) => string,
-  ) {
-    this.requestJsonSchema = inputJsonSchema(schema, `capability '${name}' schema`);
-  }
-  [compileCapabilityBrand]({
-    id,
-    stateSchema,
-    callbacks,
-  }: CapabilityCompileContext<TState>): object {
-    const validate = callbacks.registerSync((_, input) => issues(this.schema, input));
-    const validateFor = this.validateFor
-      ? callbacks.registerSync((state, input) =>
-          validationProblems(
-            this.validateFor!(
-              parseJson(stateSchema, state, `${id} state`),
-              parseJson(this.schema, input, `${id} capability '${this.name}' request`),
-            ),
-            `${id} capability '${this.name}' contextual validation`,
-          ),
-        )
-      : undefined;
-    const apply = callbacks.registerSync((state, input) =>
-      serializeBoundary(
-        stateSchema,
-        this.apply(
-          parseJson(stateSchema, state, `${id} state`),
-          parseJson(this.schema, input, `${id} capability '${this.name}' request`),
-        ),
-        `${id} applied state`,
-      ),
-    );
-    const summary = callbacks.registerSync((_, input) =>
-      this.summarize(parseJson(this.schema, input, `${id} capability '${this.name}' request`)),
-    );
-    return {
-      name: this.name,
-      instructions: this.instructions,
-      jsonSchema: this.requestJsonSchema,
-      validateCallback: validate,
-      validateForCallback: validateFor,
-      applyCallback: apply,
-      summaryCallback: summary,
-      valueType: `${id}.capability.${this.name}`,
-    };
-  }
-}
+/** Capabilities are only created by `capability()`, which also records the request JSON schema. */
+type CapabilityRecord<TState> = Capability<TState> & { readonly requestJsonSchema: string };
 export function capability<TState, TRequest>(definition: {
   readonly name: string;
   readonly instructions: string;
@@ -665,15 +582,43 @@ export function capability<TState, TRequest>(definition: {
   readonly apply: (state: TState, request: TRequest) => TState;
   readonly summarize: (request: TRequest) => string;
 }): Capability<TState> {
-  requireInstructions(definition.instructions, `Capability '${definition.name}' instructions`);
-  return new CapabilityImplementation(
-    definition.name,
-    definition.instructions,
-    definition.schema,
-    definition.validateFor,
-    definition.apply,
-    definition.summarize,
-  );
+  const { name, instructions, schema, validateFor, apply, summarize } = definition;
+  requireInstructions(instructions, `Capability '${name}' instructions`);
+  const requestJsonSchema = inputJsonSchema(schema, `capability '${name}' schema`);
+  const compile = ({ id, stateSchema, callbacks }: CapabilityCompileContext<TState>): object => {
+    const parseState = (state: string) => parseJson(stateSchema, state, `${id} state`);
+    const parseRequest = (input: string) =>
+      parseJson(schema, input, `${id} capability '${name}' request`);
+    return {
+      name,
+      instructions,
+      jsonSchema: requestJsonSchema,
+      validateCallback: callbacks.registerSync((_, input) => issues(schema, input)),
+      validateForCallback: validateFor
+        ? callbacks.registerSync((state, input) =>
+            validationProblems(
+              validateFor(parseState(state), parseRequest(input)),
+              `${id} capability '${name}' contextual validation`,
+            ),
+          )
+        : undefined,
+      applyCallback: callbacks.registerSync((state, input) =>
+        serializeBoundary(
+          stateSchema,
+          apply(parseState(state), parseRequest(input)),
+          `${id} applied state`,
+        ),
+      ),
+      summaryCallback: callbacks.registerSync((_, input) => summarize(parseRequest(input))),
+      valueType: `${id}.capability.${name}`,
+    };
+  };
+  const record: CapabilityRecord<TState> = {
+    name,
+    requestJsonSchema,
+    [compileCapabilityBrand]: compile,
+  };
+  return Object.freeze(record);
 }
 
 export interface OpenAiCompatibleChatClient {
@@ -741,15 +686,10 @@ export type AgentToolInterceptor<TState> = (
   invocation: AgentToolInvocation,
   context: { readonly signal: AbortSignal },
 ) => string | null | Promise<string | null>;
-class AgentToolGroupImplementation<TState> implements AgentToolGroup<TState> {
-  readonly [toolGroupBrand]: (state: TState) => boolean;
-  constructor(
-    readonly predicate: ((state: TState) => boolean) | undefined,
-    readonly tools: readonly AgentToolSelection[],
-  ) {
-    this[toolGroupBrand] = predicate ?? (() => true);
-  }
-}
+type ToolGroupRecord<TState> = AgentToolGroup<TState> & {
+  readonly predicate: ((state: TState) => boolean) | undefined;
+  readonly tools: readonly AgentToolSelection[];
+};
 function createToolGroup<TState>(
   predicate: ((state: TState) => boolean) | undefined,
   tools: readonly AgentToolSelection[],
@@ -767,7 +707,12 @@ function createToolGroup<TState>(
     }
     seen.add(tool);
   }
-  return new AgentToolGroupImplementation(predicate, tools);
+  const record: ToolGroupRecord<TState> = {
+    [toolGroupBrand]: predicate ?? (() => true),
+    predicate,
+    tools,
+  };
+  return Object.freeze(record);
 }
 export const agentTools = {
   always: (...tools: readonly AgentToolSelection[]): AgentToolGroup<never> =>
@@ -787,55 +732,18 @@ export interface AgentWorkspace<TState> {
     options?: { readonly interceptTool?: AgentToolInterceptor<TState> },
   ): AgentWorkspaceConfiguration<TState>;
 }
-class AgentWorkspaceImplementation<TState> implements AgentWorkspace<TState> {
-  readonly commands: AgentCommandSelection;
+type WorkspaceSource<TState> = {
+  readonly path: (state: TState) => string;
   readonly commandSource:
     | readonly AgentCommand[]
     | ((state: TState) => readonly AgentCommand[])
     | undefined;
-  constructor(
-    readonly path: (state: TState) => string,
-    commandSource:
-      | readonly AgentCommand[]
-      | ((state: TState) => readonly AgentCommand[])
-      | undefined,
-  ) {
-    this.commandSource = commandSource;
-    this.commands = { [commandSelectionBrand]: this };
-  }
-  withTools(
-    groups: readonly (AgentToolGroup<TState> | AgentToolGroup<never>)[],
-    options?: { readonly interceptTool?: AgentToolInterceptor<TState> },
-  ): AgentWorkspaceConfiguration<TState> {
-    if (groups.length === 0) {
-      throw new TandemError("An agent workspace requires tool groups.");
-    }
-    const implementations = groups.map((group) => {
-      if (!(group instanceof AgentToolGroupImplementation)) {
-        throw new TandemError("Agent tool groups must be created by agentTools.");
-      }
-      return group as AgentToolGroupImplementation<TState>;
-    });
-    if (options?.interceptTool !== undefined && typeof options.interceptTool !== "function") {
-      throw new TandemError("Workspace tool interceptor must be a function.");
-    }
-    return new AgentWorkspaceConfigurationImplementation(
-      this,
-      implementations,
-      options?.interceptTool,
-    );
-  }
-}
-class AgentWorkspaceConfigurationImplementation<
-  TState,
-> implements AgentWorkspaceConfiguration<TState> {
-  readonly [workspaceBrand]!: (state: TState) => TState;
-  constructor(
-    readonly workspace: AgentWorkspaceImplementation<TState>,
-    readonly groups: readonly AgentToolGroupImplementation<TState>[],
-    readonly interceptTool: AgentToolInterceptor<TState> | undefined,
-  ) {}
-}
+};
+type WorkspaceConfigurationRecord<TState> = AgentWorkspaceConfiguration<TState> & {
+  readonly workspace: WorkspaceSource<TState>;
+  readonly groups: readonly ToolGroupRecord<TState>[];
+  readonly interceptTool: AgentToolInterceptor<TState> | undefined;
+};
 export function agentWorkspace<TState>(definition: {
   readonly path: (state: TState) => string;
   readonly commands?: readonly AgentCommand[] | ((state: TState) => readonly AgentCommand[]);
@@ -843,12 +751,42 @@ export function agentWorkspace<TState>(definition: {
   if (typeof definition.path !== "function") {
     throw new TandemError("Workspace path is required.");
   }
-  // Parsing copies a static catalogue, so later mutation by the caller cannot change it.
-  const commands =
-    typeof definition.commands === "function" || definition.commands === undefined
-      ? definition.commands
-      : parseDefinition(agentCommandsSchema, definition.commands, "Workspace commands");
-  return new AgentWorkspaceImplementation(definition.path, commands);
+  const workspace: WorkspaceSource<TState> = Object.freeze({
+    path: definition.path,
+    // Parsing copies a static catalogue, so later mutation by the caller cannot change it.
+    commandSource:
+      typeof definition.commands === "function" || definition.commands === undefined
+        ? definition.commands
+        : parseDefinition(agentCommandsSchema, definition.commands, "Workspace commands"),
+  });
+  return Object.freeze({
+    commands: Object.freeze({ [commandSelectionBrand]: workspace }),
+    withTools(
+      groups: readonly (AgentToolGroup<TState> | AgentToolGroup<never>)[],
+      options?: { readonly interceptTool?: AgentToolInterceptor<TState> },
+    ): AgentWorkspaceConfiguration<TState> {
+      if (groups.length === 0) {
+        throw new TandemError("An agent workspace requires tool groups.");
+      }
+      const records = groups.map((group) => {
+        if (!("tools" in group)) {
+          throw new TandemError("Agent tool groups must be created by agentTools.");
+        }
+        // A tool group record is the object `agentTools` returned.
+        return group as ToolGroupRecord<TState>;
+      });
+      if (options?.interceptTool !== undefined && typeof options.interceptTool !== "function") {
+        throw new TandemError("Workspace tool interceptor must be a function.");
+      }
+      const configuration: WorkspaceConfigurationRecord<TState> = {
+        [workspaceBrand]: keepState,
+        workspace,
+        groups: records,
+        interceptTool: options?.interceptTool,
+      };
+      return Object.freeze(configuration);
+    },
+  });
 }
 
 const agentCommandsSchema = z.array(
@@ -914,45 +852,7 @@ export interface AgentDefinition<TState, TOutput = never> {
   readonly timeoutMs?: number;
   readonly persist?: boolean;
 }
-class AgentImplementation<TState, TOutput>
-  extends NodeImplementation<TState>
-  implements Agent<TState>
-{
-  readonly kind = "agent";
-  constructor(
-    id: string,
-    persist: boolean | undefined,
-    readonly instructions: string,
-    readonly client: ChatClient,
-    readonly message: (state: TState) => string,
-    readonly output:
-      | {
-          instructions: string;
-          schema: z.ZodType<TOutput>;
-          validateFor?: (state: TState, output: TOutput) => readonly ValidationProblem[];
-          apply: (state: TState, output: TOutput) => TState;
-        }
-      | {
-          instructions: string;
-          raw: true;
-          parse: (response: string) => TOutput;
-          validateFor?: (state: TState, output: TOutput) => readonly ValidationProblem[];
-          apply: (state: TState, output: TOutput) => TState;
-        }
-      | undefined,
-    readonly granted: readonly Capability<TState>[],
-    readonly skills: readonly AgentSkill[],
-    readonly workspace: AgentWorkspaceConfiguration<TState> | undefined,
-    readonly temperature: number | undefined,
-    readonly maxOutputTokens: number | undefined,
-    readonly reasoning: AgentReasoning | undefined,
-    readonly continueSession: boolean,
-    readonly checkpoint: AgentDefinition<TState>["checkpoint"],
-    readonly timeoutMs?: number,
-  ) {
-    super(id, persist);
-  }
-}
+type AgentRecord<TState, TOutput> = Agent<TState> & AgentDefinition<TState, TOutput>;
 const capabilityReference = z.custom<{ readonly name: string }>();
 const agentOutputSchema = z.discriminatedUnion(
   "raw",
@@ -1046,25 +946,12 @@ export function agent<TState, TOutput = never>(
     );
   }
   parseDefinition(agentOptionsSchema, definition, `Agent '${definition.id}'`);
-  const capabilities = definition.capabilities ?? [];
-  const skills = definition.skills ?? [];
-  return new AgentImplementation(
-    definition.id,
-    definition.persist,
-    definition.instructions,
-    definition.client,
-    definition.message,
-    definition.output,
-    capabilities,
-    skills,
-    definition.workspace,
-    definition.temperature,
-    definition.maxOutputTokens,
-    definition.reasoning,
-    definition.continueSession ?? false,
-    definition.checkpoint,
-    definition.timeoutMs,
-  );
+  const record: AgentRecord<TState, TOutput> = {
+    ...definition,
+    [participantBrand]: keepState,
+    kind: "agent",
+  };
+  return Object.freeze(record);
 }
 
 type ParallelBranches<TState> = Readonly<Record<string, Stage<TState> | Agent<TState>>>;
@@ -1079,24 +966,8 @@ type ParallelDefinition<TState, TBranches extends ParallelBranches<TState>> = {
   readonly max?: number;
   readonly persist?: boolean;
 };
-class ParallelImplementation<TState, TBranches extends ParallelBranches<TState>>
-  extends NodeImplementation<TState>
-  implements Parallel<TState>
-{
-  readonly kind = "parallel";
-  constructor(
-    id: string,
-    persist: boolean | undefined,
-    readonly branches: TBranches,
-    readonly max: number | undefined,
-    readonly merge: (
-      baseline: TState,
-      results: { readonly [K in keyof TBranches]: TState },
-    ) => TState,
-  ) {
-    super(id, persist);
-  }
-}
+type ParallelRecord<TState, TBranches extends ParallelBranches<TState>> = Parallel<TState> &
+  ParallelDefinition<TState, TBranches>;
 export function parallel<TState>(): <const TBranches extends ParallelBranches<TState>>(
   definition: ParallelDefinition<TState, TBranches>,
 ) => Parallel<TState>;
@@ -1133,41 +1004,43 @@ function createParallel<TState, TBranches extends ParallelBranches<TState>>(
   definition: ParallelDefinition<TState, TBranches>,
 ): Parallel<TState> {
   parseDefinition(parallelOptionsSchema, definition, `Parallel group '${definition.id}'`);
-  return new ParallelImplementation(
-    definition.id,
-    definition.persist,
-    definition.branches,
-    definition.max,
-    definition.merge,
-  );
+  const record: ParallelRecord<TState, TBranches> = {
+    ...definition,
+    [participantBrand]: keepState,
+    kind: "parallel",
+  };
+  return Object.freeze(record);
 }
 
-class TerminalImplementation<TState>
-  extends NodeImplementation<TState>
-  implements Terminal<TState>
-{
-  readonly kind = "terminal";
-  constructor(
-    id: string,
-    persist: boolean | undefined,
-    readonly failed: boolean,
-    readonly summary: (state: TState) => string,
-  ) {
-    super(id, persist);
-  }
-}
-export function output<TState>(definition: {
+type TerminalDefinition<TState> = {
   id: string;
   summary: (state: TState) => string;
   failed?: boolean;
   persist?: boolean;
-}): Terminal<TState> {
-  return new TerminalImplementation(
-    definition.id,
-    definition.persist,
-    definition.failed ?? false,
-    definition.summary,
-  );
+};
+type TerminalRecord<TState> = Terminal<TState> & TerminalDefinition<TState>;
+export function output<TState>(definition: TerminalDefinition<TState>): Terminal<TState> {
+  const record: TerminalRecord<TState> = {
+    ...definition,
+    [participantBrand]: keepState,
+    kind: "terminal",
+  };
+  return Object.freeze(record);
+}
+
+type NodeRecord<TState> =
+  | StageRecord<TState>
+  | InteractionRecord<TState, unknown, unknown>
+  | AgentRecord<TState, unknown>
+  | ParallelRecord<TState, ParallelBranches<TState>>
+  | CollectionRecord<TState, unknown, unknown>
+  | TerminalRecord<TState>;
+/**
+ * Every node is the frozen record its factory built; the exported node interfaces are opaque views
+ * of those records, with the request/output/item types erased here.
+ */
+function nodeRecord<TState>(node: Node<TState>): NodeRecord<TState> {
+  return node as NodeRecord<TState>;
 }
 
 export interface OrdinaryRoute<TState> {
@@ -1221,12 +1094,11 @@ export function pipeline<TState>(definition: {
     throw new Error("Pipeline node IDs must be unique.");
   }
   const ownedParticipants = new Set<Stage<TState> | Agent<TState>>();
-  for (const node of definition.nodes) {
+  for (const node of definition.nodes.map(nodeRecord)) {
     if (node.kind !== "parallel") {
       continue;
     }
-    const parallelNode = node as ParallelImplementation<TState, ParallelBranches<TState>>;
-    for (const [branchId, participant] of Object.entries(parallelNode.branches)) {
+    for (const participant of Object.values(node.branches)) {
       if (members.has(participant)) {
         throw new Error(
           `Parallel branch participant '${participant.id}' cannot also be a parent pipeline node.`,
@@ -1344,71 +1216,63 @@ export interface InspectedNode {
 /** Projects an instantiated pipeline without compiling, registering, or invoking callbacks. */
 export function inspectPipeline<TState>(graph: Pipeline<TState>): PipelineInspection {
   const inspectNode = (node: Node<TState>): InspectedNode => {
-    const implementation = node as NodeImplementation<TState>;
-    const persist = implementation.persist;
-    if (implementation instanceof CollectionImplementation) {
-      return {
-        id: node.id,
-        kind: "collection",
-        persist,
-        max: implementation.definition.max,
-        agents: implementation.definition.agents.map(
-          (agent: TaskAgentReference) => node.id + "/" + agent.id,
-        ),
-      };
-    }
-    if (node.kind === "interaction") {
-      const interaction = implementation as InteractionImplementation<TState, unknown, unknown>;
-      return {
-        id: node.id,
-        kind: "interaction",
-        persist,
-        interaction: {
-          requestSchema: z.toJSONSchema(interaction.requestSchema, { io: "input" }),
-          responseSchema: z.toJSONSchema(interaction.responseSchema, { io: "input" }),
-        },
-      };
-    }
-    if (node.kind === "agent") {
-      const agent = implementation as AgentImplementation<TState, unknown>;
-      return {
-        id: node.id,
-        kind: "agent",
-        persist,
-        agent: {
-          capabilities: agent.granted.map((item) => ({
-            name: item.name,
-            requestSchema: JSON.parse(
-              (item as CapabilityImplementation<TState, unknown>).requestJsonSchema,
-            ) as unknown,
-          })),
-          ...(!agent.output || "raw" in agent.output
-            ? {}
-            : { outputSchema: z.toJSONSchema(agent.output.schema, { io: "input" }) }),
-          workspace: agent.workspace !== undefined,
-        },
-      };
-    }
-    if (node.kind === "parallel") {
-      const parallel = implementation as ParallelImplementation<TState, ParallelBranches<TState>>;
-      return {
-        id: node.id,
-        kind: "parallel",
-        persist,
-        ...(parallel.max !== undefined ? { max: parallel.max } : {}),
-        branches: Object.entries(parallel.branches as ParallelBranches<TState>).map(
-          ([id, participant]) => ({
-            id,
+    const record = nodeRecord(node);
+    const { id, persist } = record;
+    switch (record.kind) {
+      case "stage":
+        return { id, kind: "stage", persist };
+      case "terminal":
+        return { id, kind: record.failed ? "failure" : "completion", persist };
+      case "collection":
+        return {
+          id,
+          kind: "collection",
+          persist,
+          max: record.max,
+          agents: record.agents.map((agent) => `${id}/${agent.id}`),
+        };
+      case "interaction":
+        return {
+          id,
+          kind: "interaction",
+          persist,
+          interaction: {
+            requestSchema: z.toJSONSchema(record.requestSchema, { io: "input" }),
+            responseSchema: z.toJSONSchema(record.responseSchema, { io: "input" }),
+          },
+        };
+      case "agent":
+        return {
+          id,
+          kind: "agent",
+          persist,
+          agent: {
+            capabilities: (record.capabilities ?? []).map((item) => ({
+              name: item.name,
+              requestSchema: JSON.parse(
+                (item as CapabilityRecord<TState>).requestJsonSchema,
+              ) as unknown,
+            })),
+            ...(!record.output || "raw" in record.output
+              ? {}
+              : { outputSchema: z.toJSONSchema(record.output.schema, { io: "input" }) }),
+            workspace: record.workspace !== undefined,
+          },
+        };
+      case "parallel":
+        return {
+          id,
+          kind: "parallel",
+          persist,
+          ...(record.max !== undefined ? { max: record.max } : {}),
+          branches: Object.entries(record.branches).map(([branchId, participant]) => ({
+            id: branchId,
             participant: inspectNode(participant),
-          }),
-        ),
-      };
+          })),
+        };
+      default:
+        return record satisfies never;
     }
-    if (node.kind === "terminal") {
-      const terminal = implementation as TerminalImplementation<TState>;
-      return { id: node.id, kind: terminal.failed ? "failure" : "completion", persist };
-    }
-    return { id: node.id, kind: "stage", persist };
   };
   return {
     name: graph.name,
@@ -1575,29 +1439,21 @@ export async function run<TState>(
       };
     });
     const handlerEntries = interactionHandlerEntries(options.interactions);
-    const members = new Set(graph.nodes);
+    const members = new Set<object>(graph.nodes);
     const interactionHandlers = handlerEntries.map((entry, index) => {
-      if (!members.has(entry.interaction as Node<TState>)) {
+      if (!members.has(entry.interaction)) {
         throw new TandemError(
           `Interaction handler '${entry.interaction.id}' must target a participant in pipeline '${graph.name}'.`,
         );
       }
-      const implementation = entry.interaction as InteractionImplementation<
-        TState,
-        unknown,
-        unknown
-      >;
+      const { id, requestSchema, responseSchema } = entry.interaction;
       const handleCallback = callbacks.registerAsync(async (_, input, signal) => {
         const response = await entry.handle(
-          parseJson(implementation.requestSchema, input, `${implementation.id} request input`),
+          parseJson(requestSchema, input, `${id} request input`),
           { signal },
         );
         signal.throwIfAborted();
-        return serializeBoundary(
-          implementation.responseSchema,
-          response,
-          `${implementation.id} response`,
-        );
+        return serializeBoundary(responseSchema, response, `${id} response`);
       });
       return { id: `h${index}`, target: entry.interaction.id, handleCallback };
     });
@@ -1657,15 +1513,11 @@ export async function run<TState>(
 }
 
 function participantPersists<TState>(node: Node<TState>): boolean {
-  const implementation = node as NodeImplementation<TState>;
-  if (implementation.persist) {
-    return true;
-  }
-  return implementation instanceof ParallelImplementation
-    ? Object.values(implementation.branches).some(
-        (branch) => (branch as NodeImplementation<TState>).persist === true,
-      )
-    : false;
+  const record = nodeRecord(node);
+  return (
+    record.persist === true ||
+    (record.kind === "parallel" && Object.values(record.branches).some(participantPersists))
+  );
 }
 
 function issues<T>(schema: z.ZodType<T>, input: string): string {
@@ -1722,248 +1574,249 @@ function interactionHandlerEntries(
   if (!handlers) {
     return [];
   }
-  if (!(handlers instanceof InteractionHandlersImplementation)) {
+  const entries = registeredHandlers.get(handlers);
+  if (!entries) {
     throw new TandemError("interactions must be created by interactions().");
   }
-  return handlers.entries;
+  return entries;
 }
 function compileNode<TState>(
   node: Node<TState>,
   stateSchema: z.ZodType<TState>,
   callbacks: CallbackRegistry,
 ): object {
-  const implementation = node as NodeImplementation<TState>;
-  const base = { id: node.id, persist: implementation.persist };
-  if (implementation instanceof CollectionImplementation) {
-    const definition = implementation.definition;
-    const agents = definition.agents.map((value: TaskAgentReference) => {
-      if (!(value instanceof TaskAgentImplementation))
-        throw new TandemError("Use taskAgent to declare collection agents.");
-      return compileNode(value.participant, value.state, callbacks);
-    });
-    const itemsCallback = callbacks.registerSync((state) =>
-      serializeBoundary(
-        z.array(definition.item),
-        definition.items(parseJson(stateSchema, state, node.id + " state")),
-        node.id + " items",
-      ),
-    );
-    const runCallback = callbacks.registerAsync(async (item, scopeId, signal) => {
-      let active = false;
-      let closed = false;
-      const context: CollectionContext = {
-        signal,
-        async run<TInput, TOutput>(
-          value: TaskAgent<TInput, TOutput>,
-          input: NoInfer<TInput>,
-        ): Promise<TOutput> {
-          if (closed) throw new TandemError("Collection scope has ended.");
-          if (active) throw new TandemError("Collection item agents must be awaited serially.");
-          if (!definition.agents.includes(value) || !(value instanceof TaskAgentImplementation)) {
-            throw new TandemError("Agent is not declared in this collection.");
-          }
-          signal.throwIfAborted();
-          active = true;
-          try {
-            const { runCollectionAgentAsync } = await import("./runtime/loader.mjs");
-            const response = await runCollectionAgentAsync(
-              scopeId,
-              value.id,
-              serializeBoundary(value.state, { input, output: null }, value.id + " input"),
-            );
-            const state = parseJson(value.state, response, value.id + " output");
-            if (state.output === null) throw new TandemError("Agent returned no output.");
-            return parse(value.result, state.output.value, value.id + " result");
-          } finally {
-            active = false;
-          }
-        },
+  const record = nodeRecord(node);
+  const { id } = record;
+  const base = { id, persist: record.persist };
+  const parseState = (state: string, boundary: string) =>
+    parseJson(stateSchema, state, `${id} ${boundary}`);
+  switch (record.kind) {
+    case "stage":
+      return {
+        ...base,
+        kind: "stage",
+        runCallback: callbacks.registerAsync(async (state, _, signal) =>
+          serializeBoundary(
+            stateSchema,
+            await record.execute(parseState(state, "input"), { signal }),
+            `${id} output`,
+          ),
+        ),
       };
-      try {
-        const result = await definition.execute(
-          parseJson(definition.item, item, node.id + " item"),
-          context,
-        );
-        if (active) throw new TandemError("Collection item returned before its agent completed.");
-        signal.throwIfAborted();
-        return serializeBoundary(definition.result, result, node.id + " result");
-      } finally {
-        closed = true;
-      }
-    });
-    const applyCallback = callbacks.registerSync((state, results) =>
-      serializeBoundary(
-        stateSchema,
-        definition.apply(
-          parseJson(stateSchema, state, node.id + " state"),
-          parseJson(z.array(definition.result), results, node.id + " results"),
+    case "terminal":
+      return {
+        ...base,
+        kind: record.failed ? "failure" : "completion",
+        summaryCallback: callbacks.registerSync((state) =>
+          record.summary(parseState(state, "state")),
         ),
-        node.id + " output",
-      ),
-    );
-    return {
-      ...base,
-      kind: "collection",
-      agents,
-      max: definition.max,
-      itemsCallback,
-      runCallback,
-      applyCallback,
-    };
-  }
-
-  if (implementation instanceof StageImplementation) {
-    const run = callbacks.registerAsync(async (state, _, signal) =>
-      serializeBoundary(
-        stateSchema,
-        await implementation.execute(parseJson(stateSchema, state, `${node.id} input`), {
-          signal,
-        }),
-        `${node.id} output`,
-      ),
-    );
-    return { ...base, kind: "stage", runCallback: run };
-  }
-  if (implementation instanceof InteractionImplementation) {
-    const request = callbacks.registerSync((state) =>
-      serializeBoundary(
-        implementation.requestSchema,
-        implementation.request(parseJson(stateSchema, state, `${node.id} state`)),
-        `${node.id} request`,
-      ),
-    );
-    const apply = callbacks.registerSync((state, input) =>
-      serializeBoundary(
-        stateSchema,
-        implementation.apply(
-          parseJson(stateSchema, state, `${node.id} state`),
-          parseJson(implementation.responseSchema, input, `${node.id} response input`),
+      };
+    case "interaction":
+      return {
+        ...base,
+        kind: "interaction",
+        requestCallback: callbacks.registerSync((state) =>
+          serializeBoundary(
+            record.requestSchema,
+            record.request(parseState(state, "state")),
+            `${id} request`,
+          ),
         ),
-        `${node.id} applied state`,
-      ),
-    );
-    return {
-      ...base,
-      kind: "interaction",
-      requestCallback: request,
-      applyCallback: apply,
-    };
-  }
-  if (implementation instanceof AgentImplementation) {
-    const message = callbacks.registerSync((state) =>
-      implementation.message(parseJson(stateSchema, state, `${node.id} message state`)),
-    );
-    const output = implementation.output
-      ? compileAgentOutput(node.id, implementation.output, stateSchema, callbacks)
-      : undefined;
-    const capabilities = implementation.granted.map((item) =>
-      item[compileCapabilityBrand]({ id: node.id, stateSchema, callbacks }),
-    );
-    const workspace = implementation.workspace
-      ? compileWorkspace(node.id, implementation.workspace, stateSchema, callbacks)
-      : undefined;
-    return {
-      ...base,
-      kind: "agent",
-      instructions: implementation.instructions,
-      client: { ...implementation.client, verifyModel: implementation.client.verifyModel ?? false },
-      messageCallback: message,
-      output,
-      capabilities,
-      skillDirectories: implementation.skills.map((item) => item.directory),
-      temperature: implementation.temperature,
-      maxOutputTokens: implementation.maxOutputTokens,
-      reasoning: implementation.reasoning,
-      continueSession: implementation.continueSession,
-      checkpoint: implementation.checkpoint
-        ? {
-            contextWindowTokens: implementation.checkpoint.contextWindowTokens,
-            maxOutputTokens: implementation.checkpoint.maxOutputTokens,
-            checkpointAtPercent: implementation.checkpoint.checkpointAtPercent,
-            capabilityName: implementation.checkpoint.capability.name,
-            instructions: implementation.checkpoint.instructions,
-            messageCallback: callbacks.registerSync((state, input) =>
-              implementation.checkpoint!.message(
-                parseJson(stateSchema, state, `${node.id} checkpoint state`),
-                Number(input),
-              ),
+        applyCallback: callbacks.registerSync((state, input) =>
+          serializeBoundary(
+            stateSchema,
+            record.apply(
+              parseState(state, "state"),
+              parseJson(record.responseSchema, input, `${id} response input`),
             ),
-            resetSession: (implementation.checkpoint.session ?? "reset") === "reset",
-            disableCompaction: implementation.checkpoint.disableCompaction ?? false,
-          }
-        : undefined,
-      timeoutMilliseconds: implementation.timeoutMs,
-      workspace,
-    };
-  }
-  if (implementation instanceof ParallelImplementation) {
-    const entries = Object.entries(implementation.branches) as [
-      string,
-      Stage<TState> | Agent<TState>,
-    ][];
-    const branchIds = entries.map(([branchId]) => branchId);
-    const mergeCallback = callbacks.registerSync((state, input) => {
-      const baseline = parseJson(stateSchema, state, `${node.id} merge baseline`);
-      let raw: unknown;
-      try {
-        raw = JSON.parse(input);
-      } catch {
-        throw new ContractValidationError(`${node.id} merge branches`, [
-          { path: "$", message: "Invalid JSON" },
-        ]);
-      }
-      if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
-        throw new ContractValidationError(`${node.id} merge branches`, [
-          { path: "$", message: "Expected a branch-state object." },
-        ]);
-      }
-      const values = raw as Record<string, unknown>;
-      if (!isDeepStrictEqual(Object.keys(values).sort(), [...branchIds].sort())) {
-        throw new ContractValidationError(`${node.id} merge branches`, [
-          { path: "$", message: "Branch-state keys do not match the authored branches." },
-        ]);
-      }
-      const parsed = Object.fromEntries(
-        branchIds.map((branchId) => [
-          branchId,
-          parse(stateSchema, values[branchId], `${node.id} branch '${branchId}' state`),
-        ]),
-      ) as { readonly [key: string]: TState };
-      return serializeBoundary(
-        stateSchema,
-        implementation.merge(baseline, parsed),
-        `${node.id} merged state`,
+            `${id} applied state`,
+          ),
+        ),
+      };
+    case "collection":
+      return compileCollection(record, stateSchema, callbacks);
+    case "agent":
+      return compileAgent(record, stateSchema, callbacks);
+    case "parallel": {
+      const branches = Object.entries(record.branches);
+      const branchStates = z.strictObject(
+        Object.fromEntries(branches.map(([branchId]) => [branchId, stateSchema])),
       );
-    });
-    return {
-      ...base,
-      kind: "parallel",
-      ...(implementation.max !== undefined ? { max: implementation.max } : {}),
-      branches: entries.map(([id, participant]) => ({
-        id,
-        participant: compileNode(participant, stateSchema, callbacks),
-      })),
-      mergeCallback,
-    };
+      return {
+        ...base,
+        kind: "parallel",
+        ...(record.max !== undefined ? { max: record.max } : {}),
+        branches: branches.map(([branchId, participant]) => ({
+          id: branchId,
+          participant: compileNode(participant, stateSchema, callbacks),
+        })),
+        mergeCallback: callbacks.registerSync((state, input) =>
+          serializeBoundary(
+            stateSchema,
+            record.merge(
+              parseState(state, "merge baseline"),
+              parseJson(branchStates, input, `${id} merge branches`),
+            ),
+            `${id} merged state`,
+          ),
+        ),
+      };
+    }
+    default:
+      return record satisfies never;
   }
-  const terminal = implementation as TerminalImplementation<TState>;
-  const summary = callbacks.registerSync((state) =>
-    terminal.summary(parseJson(stateSchema, state, `${node.id} state`)),
+}
+
+function compileCollection<TState>(
+  collection: CollectionRecord<TState, unknown, unknown>,
+  stateSchema: z.ZodType<TState>,
+  callbacks: CallbackRegistry,
+): object {
+  const { id } = collection;
+  const agents = collection.agents.map((reference) => {
+    const task = taskAgentRecord(reference);
+    return compileNode(task.participant, task.state, callbacks);
+  });
+  const itemsCallback = callbacks.registerSync((state) =>
+    serializeBoundary(
+      z.array(collection.item),
+      collection.items(parseJson(stateSchema, state, `${id} state`)),
+      `${id} items`,
+    ),
   );
-  return { ...base, kind: terminal.failed ? "failure" : "completion", summaryCallback: summary };
+  const runCallback = callbacks.registerAsync(async (item, scopeId, signal) => {
+    let active = false;
+    let closed = false;
+    const context: CollectionContext = {
+      signal,
+      async run<TInput, TOutput>(
+        value: TaskAgent<TInput, TOutput>,
+        input: NoInfer<TInput>,
+      ): Promise<TOutput> {
+        if (closed) throw new TandemError("Collection scope has ended.");
+        if (active) throw new TandemError("Collection item agents must be awaited serially.");
+        if (!collection.agents.includes(value)) {
+          throw new TandemError("Agent is not declared in this collection.");
+        }
+        const task = taskAgentRecord(value);
+        signal.throwIfAborted();
+        active = true;
+        try {
+          const { runCollectionAgentAsync } = await import("./runtime/loader.mjs");
+          const response = await runCollectionAgentAsync(
+            scopeId,
+            task.id,
+            serializeBoundary(task.state, { input, output: null }, `${task.id} input`),
+          );
+          const state = parseJson(task.state, response, `${task.id} output`);
+          if (state.output === null) throw new TandemError("Agent returned no output.");
+          return parse(task.result, state.output.value, `${task.id} result`);
+        } finally {
+          active = false;
+        }
+      },
+    };
+    try {
+      const result = await collection.execute(
+        parseJson(collection.item, item, `${id} item`),
+        context,
+      );
+      if (active) throw new TandemError("Collection item returned before its agent completed.");
+      signal.throwIfAborted();
+      return serializeBoundary(collection.result, result, `${id} result`);
+    } finally {
+      closed = true;
+    }
+  });
+  const applyCallback = callbacks.registerSync((state, results) =>
+    serializeBoundary(
+      stateSchema,
+      collection.apply(
+        parseJson(stateSchema, state, `${id} state`),
+        parseJson(z.array(collection.result), results, `${id} results`),
+      ),
+      `${id} output`,
+    ),
+  );
+  return {
+    id,
+    persist: collection.persist,
+    kind: "collection",
+    agents,
+    max: collection.max,
+    itemsCallback,
+    runCallback,
+    applyCallback,
+  };
+}
+
+function compileAgent<TState>(
+  agent: AgentRecord<TState, unknown>,
+  stateSchema: z.ZodType<TState>,
+  callbacks: CallbackRegistry,
+): object {
+  const { id, checkpoint } = agent;
+  const message = callbacks.registerSync((state) =>
+    agent.message(parseJson(stateSchema, state, `${id} message state`)),
+  );
+  const output = agent.output
+    ? compileAgentOutput(id, agent.output, stateSchema, callbacks)
+    : undefined;
+  const capabilities = (agent.capabilities ?? []).map((item) =>
+    item[compileCapabilityBrand]({ id, stateSchema, callbacks }),
+  );
+  const workspace = agent.workspace
+    ? compileWorkspace(id, agent.workspace, stateSchema, callbacks)
+    : undefined;
+  return {
+    id,
+    persist: agent.persist,
+    kind: "agent",
+    instructions: agent.instructions,
+    client: { ...agent.client, verifyModel: agent.client.verifyModel ?? false },
+    messageCallback: message,
+    output,
+    capabilities,
+    skillDirectories: (agent.skills ?? []).map((item) => item.directory),
+    temperature: agent.temperature,
+    maxOutputTokens: agent.maxOutputTokens,
+    reasoning: agent.reasoning,
+    continueSession: agent.continueSession ?? false,
+    checkpoint: checkpoint
+      ? {
+          contextWindowTokens: checkpoint.contextWindowTokens,
+          maxOutputTokens: checkpoint.maxOutputTokens,
+          checkpointAtPercent: checkpoint.checkpointAtPercent,
+          capabilityName: checkpoint.capability.name,
+          instructions: checkpoint.instructions,
+          messageCallback: callbacks.registerSync((state, input) =>
+            checkpoint.message(
+              parseJson(stateSchema, state, `${id} checkpoint state`),
+              Number(input),
+            ),
+          ),
+          resetSession: (checkpoint.session ?? "reset") === "reset",
+          disableCompaction: checkpoint.disableCompaction ?? false,
+        }
+      : undefined,
+    timeoutMilliseconds: agent.timeoutMs,
+    workspace,
+  };
 }
 
 function compileWorkspace<TState>(
   id: string,
-  configuration: AgentWorkspaceConfiguration<TState>,
+  authored: AgentWorkspaceConfiguration<TState>,
   stateSchema: z.ZodType<TState>,
   callbacks: CallbackRegistry,
 ): object {
-  if (!(configuration instanceof AgentWorkspaceConfigurationImplementation)) {
+  if (!("groups" in authored)) {
     throw new TandemError(
       `Agent '${id}' workspace must be created by agentWorkspace().withTools().`,
     );
   }
+  // A workspace configuration is the record `withTools()` returned.
+  const configuration = authored as WorkspaceConfigurationRecord<TState>;
   const workspace = configuration.workspace;
   const pathCallback = callbacks.registerSync((state) => {
     const value = workspace.path(parseJson(stateSchema, state, `${id} workspace path state`));
