@@ -2,7 +2,9 @@ import { locateOwnership } from "../../src/ownership";
 import { openSourceLocation, resolveSourceTarget, SourceTargetSchema } from "../../src/source-open";
 import { loadCurrentPipeline } from "../utils/pipeline";
 
-export default defineEventHandler(async (event) => {
+type OpenResult = { readonly ok: true } | { readonly ok: false; readonly error: string };
+
+export default defineEventHandler(async (event): Promise<OpenResult> => {
   const target = await readValidatedBody(event, SourceTargetSchema.parse);
   const { config, loaded } = await loadCurrentPipeline();
   if (!loaded.ok) {

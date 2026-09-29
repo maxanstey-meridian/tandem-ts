@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps } from "@vue-flow/core";
-const props = defineProps<EdgeProps>();
+import type { SemanticEdgeData } from "../ports/studioGraph";
+const props = defineProps<EdgeProps<SemanticEdgeData>>();
 const path = computed(() => getBezierPath(props));
 const labelAnchor = computed(() =>
   props.data?.elkPath && props.data?.elkAnchor

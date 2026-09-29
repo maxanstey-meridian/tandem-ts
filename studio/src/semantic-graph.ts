@@ -11,6 +11,16 @@ export const SEMANTIC_CARD = {
   incomingCenterY: 27,
 } as const;
 
+export const kindLabels: Readonly<Record<InspectedNode["kind"], string>> = {
+  stage: "Stage",
+  interaction: "Interaction",
+  agent: "Agent",
+  parallel: "Parallel group",
+  collection: "Collection",
+  completion: "Successful output",
+  failure: "Failed output",
+};
+
 export type PresentationMode = "lifecycle" | "all";
 export type RouteClass = "primary" | "terminal" | "correction" | "alternative" | "failure";
 export interface SemanticRoute extends InspectedRoute {

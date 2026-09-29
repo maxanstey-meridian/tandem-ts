@@ -1,27 +1,23 @@
 <script setup lang="ts">
 import { Handle, Position } from "@vue-flow/core";
-const props = defineProps<{ data: any }>();
+import type { RoutePort } from "../../src/semantic-graph";
+import { kindLabels } from "../../src/semantic-graph";
+import type { SemanticNodeData } from "../ports/studioGraph";
+const props = defineProps<{ data: SemanticNodeData }>();
+const emit = defineEmits<{
+  "select-route": [routeId: string];
+  "hover-route": [routeId: string];
+  "leave-route": [];
+}>();
 function handleSize() {
   return { width: `${props.data.portSize}px`, height: `${props.data.portSize}px` };
 }
-function portStyle(port: any) {
+function portStyle(port: RoutePort) {
   return {
     ...handleSize(),
     top: `${port.centerY}px`,
     right: "-4px",
   };
-}
-function cue(kind: string) {
-  return (
-    {
-      stage: "Stage",
-      interaction: "Interaction",
-      agent: "Agent",
-      parallel: "Parallel group",
-      completion: "Successful output",
-      failure: "Failed output",
-    } as Record<string, string>
-  )[kind];
 }
 </script>
 <template>
@@ -42,7 +38,7 @@ function cue(kind: string) {
     />
     <header>
       <strong>{{ data.title }}</strong
-      ><small>{{ cue(data.kind) }}</small>
+      ><small>{{ kindLabels[data.kind] }}</small>
     </header>
     <small class="authored-id">{{ data.id }}</small>
     <span class="start">{{ data.start ? "Execution begins here" : "" }}</span>
@@ -57,10 +53,10 @@ function cue(kind: string) {
         :class="[`route-${port.classification}`, { compacted: port.compacted }]"
         role="button"
         tabindex="0"
-        @mouseenter="data.hoverRoute(port.routeId)"
-        @mouseleave="data.restoreEmphasis()"
-        @click.stop="data.selectRoute(port.routeId)"
-        @keydown.enter.stop="data.selectRoute(port.routeId)"
+        @mouseenter="emit('hover-route', port.routeId)"
+        @mouseleave="emit('leave-route')"
+        @click.stop="emit('select-route', port.routeId)"
+        @keydown.enter.stop="emit('select-route', port.routeId)"
       >
         <span v-if="port.conditional" class="conditional" title="Conditional route">◇</span>
         <span v-if="port.classification === 'correction'" aria-label="Correction route">↩</span>
@@ -79,9 +75,9 @@ function cue(kind: string) {
       role="button"
       tabindex="0"
       :aria-label="`Select route ${port.label}`"
-      @click.stop="data.selectRoute(port.routeId)"
-      @keydown.enter.stop.prevent="data.selectRoute(port.routeId)"
-      @keydown.space.stop.prevent="data.selectRoute(port.routeId)"
+      @click.stop="emit('select-route', port.routeId)"
+      @keydown.enter.stop.prevent="emit('select-route', port.routeId)"
+      @keydown.space.stop.prevent="emit('select-route', port.routeId)"
     />
     <div v-for="port in data.creationPorts" :key="port.id" class="creation-row">
       <small>Add {{ port.outcome ?? "route" }}</small

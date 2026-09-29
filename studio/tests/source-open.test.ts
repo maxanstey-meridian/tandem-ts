@@ -39,10 +39,13 @@ test("source targets resolve only through validated ownership metadata", () => {
     ),
     { file: "/project/pipeline.ts", line: 12 },
   );
-  assert.deepEqual(resolveSourceTarget(ownership, SourceTargetSchema.parse({ kind: "route", order: 0 })), {
-    file: "/project/pipeline.ts",
-    line: 20,
-  });
+  assert.deepEqual(
+    resolveSourceTarget(ownership, SourceTargetSchema.parse({ kind: "route", order: 0 })),
+    {
+      file: "/project/pipeline.ts",
+      line: 20,
+    },
+  );
   assert.equal(
     resolveSourceTarget(ownership, { kind: "participant", id: "/etc/passwd" }),
     undefined,

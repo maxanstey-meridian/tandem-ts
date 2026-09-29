@@ -46,6 +46,7 @@ const VueFlowStub = defineComponent({
     </template>
     <button data-testid="connect" @click="$emit('connect', { source: 'agent', target: 'done' })">connect</button>
     <button data-testid="connect-after-route" @click="$emit('connect', { source: 'agent', sourceHandle: 'port:agent:success:0', target: 'done' })">connect after route</button>
+    <button data-testid="connect-stage" @click="$emit('connect', { source: 'enabled', target: 'done' })">connect stage</button>
     <button data-testid="reconnect" @click="$emit('edge-update', { edge: edges[0], connection: { source: 'agent', target: 'agent' } })">reconnect</button>
     <slot />
   </div>`,
@@ -166,7 +167,11 @@ function response(routes = [route]) {
       },
     },
     editing: {
-      insertions: { "agent\u0000success": [true, true], "agent\u0000failed": [true] },
+      insertions: {
+        "agent\u0000success": [true, true],
+        "agent\u0000failed": [true],
+        "enabled\u0000default": [true],
+      },
       moves: routes.map(() => [true]),
     },
     editRevision: `revision-${routes.length}`,
@@ -719,6 +724,19 @@ describe("confirmed graph editing", () => {
       .find((candidate) => candidate.text().includes("Route order"))!
       .get("select");
     expect((routeOrder.element as HTMLSelectElement).value).toBe("1");
+    wrapper.unmount();
+  });
+
+  it("drafts a route from an outcome-less participant dragged without a route handle", async () => {
+    const fetch = vi.fn(async (url: string) =>
+      url === "/api/changes" ? { generation: 0 } : response(),
+    );
+    const wrapper = await mounted(fetch);
+
+    await wrapper.get('[data-testid="connect-stage"]').trigger("click");
+
+    expect(wrapper.text()).toContain("Create route");
+    expect(wrapper.text()).not.toContain("What happened?");
     wrapper.unmount();
   });
 });

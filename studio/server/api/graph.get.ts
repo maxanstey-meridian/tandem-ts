@@ -1,12 +1,13 @@
 import { outgoingRouteIndexes, resolveRouteBoundary, validateRouteEdit } from "../../src/edit";
+import type { GraphResponse, RouteEditing } from "../../src/graph-response";
 import { editRevision, locateOwnership } from "../../src/ownership";
 import { loadCurrentPipeline } from "../utils/pipeline";
 
-export default defineEventHandler(async () => {
+export default defineEventHandler(async (): Promise<GraphResponse> => {
   try {
     const { config, loaded } = await loadCurrentPipeline();
     if (!loaded.ok) {
-      return { config, ...loaded };
+      return loaded;
     }
     const ownership = locateOwnership(config, loaded.graph);
     const indexes = ownership.routes.map((route) =>
@@ -49,7 +50,7 @@ export default defineEventHandler(async () => {
         });
       }),
     );
-    const editing = {
+    const editing: RouteEditing = {
       insertions: insertionGroups,
       moves: loaded.graph.routes.map((route, from) => {
         const count = outgoingRouteIndexes(loaded.graph, route.source, route.outcome).length;
