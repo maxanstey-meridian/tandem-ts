@@ -1,4 +1,4 @@
-import { readFile, stat } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { dirname, isAbsolute, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isAlias, isMap, isNode, isPair, isScalar, isSeq, parseDocument } from "yaml";
@@ -138,15 +138,8 @@ export async function readPacketFile<TSchema extends z.ZodType>(
   options.signal?.throwIfAborted();
   let content: string;
   try {
-    const source = await stat(fullPath);
-    if (source.size > maximumSourceBytes) {
-      throw failure(fullPath, `Packet source exceeds the ${maximumSourceBytes} byte limit.`, "$");
-    }
     content = await readFile(fullPath, { encoding: "utf8", signal: options.signal });
   } catch (cause) {
-    if (cause instanceof PacketFileError) {
-      throw cause;
-    }
     if (cause instanceof Error && cause.name === "AbortError") {
       throw cause;
     }
@@ -241,16 +234,8 @@ function failure(
   });
 }
 function zodPath(path: readonly PropertyKey[]): string {
-  if (path.length === 0) {
-    return "$";
-  }
   return path.reduce<string>(
-    (value, part) =>
-      typeof part === "number"
-        ? `${value}[${part}]`
-        : value === ""
-          ? String(part)
-          : `${value}.${String(part)}`,
+    (value, part) => (typeof part === "number" ? `${value}[${part}]` : `${value}.${String(part)}`),
     "$",
   );
 }
