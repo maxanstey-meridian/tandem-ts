@@ -226,35 +226,17 @@ function parse<T>(schema: z.ZodType<T>, value: unknown, boundary: string): T {
   }
   return result;
 }
+/**
+ * The walker is the whole losslessness check: a stringify/parse round-trip compares only enumerable
+ * data, so it misses accessors and non-enumerable properties, and it cannot name the failing path.
+ */
 function serializeBoundary<T>(schema: z.ZodType<T>, value: unknown, boundary: string): string {
   const parsed = parse(schema, value, boundary);
   const problem = jsonValueProblem(parsed, "$", new WeakSet<object>());
   if (problem) {
     throw new ContractValidationError(boundary, [problem]);
   }
-  let json: string | undefined;
-  try {
-    json = JSON.stringify(parsed);
-  } catch (error) {
-    throw new ContractValidationError(boundary, [
-      {
-        path: "$",
-        message: `Value is not JSON-serializable: ${error instanceof Error ? error.message : String(error)}`,
-      },
-    ]);
-  }
-  if (json === undefined) {
-    throw new ContractValidationError(boundary, [
-      { path: "$", message: "Top-level undefined is not JSON-serializable." },
-    ]);
-  }
-  const roundTripped = JSON.parse(json) as unknown;
-  if (!isDeepStrictEqual(roundTripped, parsed)) {
-    throw new ContractValidationError(boundary, [
-      { path: "$", message: "Value is not losslessly JSON-serializable." },
-    ]);
-  }
-  return json;
+  return JSON.stringify(parsed);
 }
 
 function jsonValueProblem(
@@ -265,8 +247,8 @@ function jsonValueProblem(
   if (value === undefined) {
     return { path: valuePath, message: "undefined is not JSON-serializable." };
   }
-  if (typeof value === "number" && !Number.isFinite(value)) {
-    return { path: valuePath, message: "Non-finite numbers are not JSON-serializable." };
+  if (typeof value === "number" && (!Number.isFinite(value) || Object.is(value, -0))) {
+    return { path: valuePath, message: "Non-finite numbers and -0 are not JSON-serializable." };
   }
   if (typeof value === "bigint" || typeof value === "symbol" || typeof value === "function") {
     return { path: valuePath, message: `${typeof value} values are not JSON-serializable.` };
