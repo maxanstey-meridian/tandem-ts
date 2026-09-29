@@ -1,6 +1,6 @@
 # tandem-ts slop cleanup spec
 
-Status: ready. Decisions made 2026-09-29 (§4).
+Status: complete — merged and released as v0.2.0 (2026-09-29). Deferred: G1 (bridge error protocol).
 Baseline: `main` @ `707f9c7` (2026-09-29). Line numbers are from that commit; re-locate by symbol name if they have moved.
 Source: independent slop hunt (2026-09-29). This repo has no prior review documents, so every item is `NEW`.
 
