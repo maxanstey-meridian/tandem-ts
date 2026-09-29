@@ -19,7 +19,7 @@ import {
   type RunObservation,
   type PipelineInspection,
 } from "../../../dist/index.js";
-import { parsePacketFile, type PacketFile } from ../packets/dist/index.js;
+import { parsePacketFile, type PacketFile } from "../../../packets/dist/index.js";
 import { runCli, type RunCliOptions } from "../../../dist/cli.js";
 import { z } from "zod";
 const PacketSchema = z.object({ count: z.string().transform(Number) });

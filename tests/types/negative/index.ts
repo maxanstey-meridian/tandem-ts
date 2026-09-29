@@ -11,7 +11,7 @@ import {
   output,
   type RunOptions,
 } from "../../../dist/index.js";
-import { parsePacketFile } from ../packets/dist/index.js;
+import { parsePacketFile } from "../../../packets/dist/index.js";
 import { z } from "zod";
 const transformedPacket = parsePacketFile(
   "---\ncount: '2'\n---",
