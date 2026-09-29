@@ -1,8 +1,10 @@
-import { spawn } from "node:child_process";
+import { execFile } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { VerificationResult } from "../state.js";
+import { promisify } from "node:util";
+import { z } from "zod";
+import { VerificationResult } from "../state.js";
 
 const cases = [
   { input: "  Hello, World!  ", expected: "hello-world" },
@@ -15,77 +17,57 @@ const cases = [
 
 const outputLimit = 64 * 1024;
 const timeoutMs = 2_000;
+const workerPath = new URL("assess-implementation-worker.mjs", import.meta.url).pathname;
+const execFileAsync = promisify(execFile);
+
+const ExecFailure = z.object({
+  message: z.string(),
+  code: z.union([z.string(), z.number()]).nullish(),
+  killed: z.boolean().optional(),
+  signal: z.string().nullish(),
+  stderr: z.string().default(""),
+});
+
+const failed = (error: string): VerificationResult => ({ passed: false, cases: [], error });
+const messageOf = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
+const describeFailure = (error: unknown): string => {
+  const failure = ExecFailure.safeParse(error);
+  if (!failure.success) {
+    return `Assessment failed: ${String(error)}`;
+  }
+  const { message, code, killed, signal, stderr } = failure.data;
+  if (code === "ERR_CHILD_PROCESS_STDIO_MAXBUFFER") {
+    return `Assessment output exceeded ${outputLimit} bytes.`;
+  }
+  if (killed) {
+    return `Assessment timed out after ${timeoutMs}ms.`;
+  }
+  if (typeof code === "number" || signal) {
+    const errorOutput = stderr.trim();
+    return `Assessment exited with ${signal ?? code}${errorOutput ? `: ${errorOutput}` : ""}`;
+  }
+  return `Assessment failed: ${message}`;
+};
 
 export const assessImplementation = async (source: string): Promise<VerificationResult> => {
   const directory = await mkdtemp(join(tmpdir(), "tandem-function-assessment-"));
   try {
-    return await new Promise<VerificationResult>((resolve) => {
-      const child = spawn(
+    let stdout: string;
+    try {
+      ({ stdout } = await execFileAsync(
         process.execPath,
-        [new URL("assess-implementation-worker.mjs", import.meta.url).pathname],
-        { cwd: directory, env: {}, stdio: ["pipe", "pipe", "pipe"] },
-      );
-      const stdout: Buffer[] = [];
-      const stderr: Buffer[] = [];
-      let stdoutBytes = 0;
-      let stderrBytes = 0;
-      let settled = false;
-      const finish = (result: VerificationResult) => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        clearTimeout(timer);
-        resolve(result);
-      };
-      const collect = (chunks: Buffer[], chunk: Buffer, stream: "stdout" | "stderr") => {
-        const total =
-          stream === "stdout" ? (stdoutBytes += chunk.length) : (stderrBytes += chunk.length);
-        if (total > outputLimit) {
-          child.kill("SIGKILL");
-          finish({
-            passed: false,
-            cases: [],
-            error: `Assessment ${stream} exceeded ${outputLimit} bytes.`,
-          });
-          return;
-        }
-        chunks.push(chunk);
-      };
-      child.stdout.on("data", (chunk: Buffer) => collect(stdout, chunk, "stdout"));
-      child.stderr.on("data", (chunk: Buffer) => collect(stderr, chunk, "stderr"));
-      child.once("error", (error) =>
-        finish({ passed: false, cases: [], error: `Assessment failed: ${error.message}` }),
-      );
-      child.once("close", (code, signal) => {
-        if (settled) {
-          return;
-        }
-        const errorOutput = Buffer.concat(stderr).toString("utf8").trim();
-        if (code !== 0) {
-          finish({
-            passed: false,
-            cases: [],
-            error: `Assessment exited with ${signal ?? code}${errorOutput ? `: ${errorOutput}` : ""}`,
-          });
-          return;
-        }
-        try {
-          finish(JSON.parse(Buffer.concat(stdout).toString("utf8")) as VerificationResult);
-        } catch (error) {
-          finish({
-            passed: false,
-            cases: [],
-            error: `Assessment returned invalid output: ${error instanceof Error ? error.message : String(error)}`,
-          });
-        }
-      });
-      const timer = setTimeout(() => {
-        child.kill("SIGKILL");
-        finish({ passed: false, cases: [], error: `Assessment timed out after ${timeoutMs}ms.` });
-      }, timeoutMs);
-      child.stdin.end(JSON.stringify({ source, cases }));
-    });
+        [workerPath, JSON.stringify({ source, cases })],
+        { cwd: directory, env: {}, timeout: timeoutMs, maxBuffer: outputLimit, killSignal: "SIGKILL" },
+      ));
+    } catch (error) {
+      return failed(describeFailure(error));
+    }
+    try {
+      return VerificationResult.parse(JSON.parse(stdout));
+    } catch (error) {
+      return failed(`Assessment returned invalid output: ${messageOf(error)}`);
+    }
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

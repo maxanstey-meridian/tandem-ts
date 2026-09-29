@@ -1,11 +1,7 @@
 import vm from "node:vm";
 import { z } from "zod";
 
-const chunks = [];
-for await (const chunk of process.stdin) {
-  chunks.push(chunk);
-}
-const request = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+const request = JSON.parse(process.argv[2]);
 const context = vm.createContext(Object.create(null), {
   codeGeneration: { strings: false, wasm: false },
 });
