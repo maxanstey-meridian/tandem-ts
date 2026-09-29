@@ -1,13 +1,15 @@
 import type { PipelineInspection } from "@maxanstey-meridian/tandem";
-import { dirname, join } from "node:path";
+import { globSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
 import {
   Node,
   Project,
   SyntaxKind,
   type ArrayLiteralExpression,
-  type CallExpression,
   type Expression,
   type ObjectLiteralExpression,
+  type PropertyAssignment,
+  type SourceFile,
 } from "ts-morph";
 export interface SourceReference {
   readonly editable: boolean;
@@ -39,42 +41,45 @@ export function editRevision(graph: PipelineInspection, ownership: SourceOwnersh
   });
 }
 
+/** The `pipeline({ name: "<name>", ... })` object literals written directly in the given files. */
+export function pipelineDeclarations(
+  sources: readonly SourceFile[],
+  name: string,
+): ObjectLiteralExpression[] {
+  return sources
+    .flatMap((source) => source.getDescendantsOfKind(SyntaxKind.CallExpression))
+    .filter((call) => call.getExpression().getText() === "pipeline")
+    .map((call) => call.getArguments()[0])
+    .filter(Node.isObjectLiteralExpression)
+    .filter((object) => {
+      const property = object.getProperty("name");
+      const initializer = Node.isPropertyAssignment(property)
+        ? property.getInitializer()
+        : undefined;
+      return Node.isStringLiteral(initializer) && initializer.getLiteralValue() === name;
+    });
+}
+
 export function locateOwnership(config: string, graph: PipelineInspection): SourceOwnership {
   const project = new Project({ skipAddingFilesFromTsConfig: true });
-  project.addSourceFilesAtPaths([
-    join(dirname(config), "**/*.ts"),
-    `!${join(dirname(config), "**/node_modules/**")}`,
-  ]);
-  const candidates: {
-    array: ArrayLiteralExpression;
-    call: CallExpression;
-    object: ObjectLiteralExpression;
-  }[] = [];
-  const pipelineCandidates: { routes: import("ts-morph").PropertyAssignment }[] = [];
-  for (const source of project.getSourceFiles()) {
-    for (const call of source.getDescendantsOfKind(SyntaxKind.CallExpression)) {
-      if (call.getExpression().getText() !== "pipeline") {
-        continue;
-      }
-      const object = call.getArguments()[0];
-      if (!Node.isObjectLiteralExpression(object)) {
-        continue;
-      }
-      const name = object.getProperty("name"),
-        routes = object.getProperty("routes"),
-        nameInitializer = Node.isPropertyAssignment(name) ? name.getInitializer() : undefined;
-      if (
-        !Node.isStringLiteral(nameInitializer) ||
-        nameInitializer.getLiteralValue() !== graph.name
-      ) {
-        continue;
-      }
-      if (Node.isPropertyAssignment(routes)) {
-        pipelineCandidates.push({ routes });
-        const value = routes.getInitializer();
-        if (Node.isArrayLiteralExpression(value)) {
-          candidates.push({ array: value, call, object });
-        }
+  const root = dirname(config);
+  // ts-morph's glob walks every directory before applying negations, so pnpm workspace links
+  // back into the repository recurse without end; node_modules must be pruned during the walk.
+  for (const file of globSync("**/*.ts", {
+    cwd: root,
+    exclude: (path) => basename(path) === "node_modules",
+  })) {
+    project.addSourceFileAtPath(join(root, file));
+  }
+  const candidates: { array: ArrayLiteralExpression; object: ObjectLiteralExpression }[] = [];
+  const pipelineCandidates: { routes: PropertyAssignment }[] = [];
+  for (const object of pipelineDeclarations(project.getSourceFiles(), graph.name)) {
+    const routes = object.getProperty("routes");
+    if (Node.isPropertyAssignment(routes)) {
+      pipelineCandidates.push({ routes });
+      const value = routes.getInitializer();
+      if (Node.isArrayLiteralExpression(value)) {
+        candidates.push({ array: value, object });
       }
     }
   }

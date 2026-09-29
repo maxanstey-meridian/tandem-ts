@@ -1,130 +1,103 @@
 import type { PipelineInspection } from "@maxanstey-meridian/tandem";
-import { spawn } from "node:child_process";
-import { access, readFile, writeFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 import { format, type FormatConfig } from "oxfmt";
+import { ts } from "ts-morph";
+import { z } from "zod";
 import { loadPipeline, type LoadResult } from "./loader.js";
 import { editRevision, locateOwnership } from "./ownership.js";
-import { editDirectRoute, type RouteEdit } from "./source.js";
+import { editDirectRoute, RouteEditSchema, type RouteEdit } from "./source.js";
 const require = createRequire(import.meta.url);
+const execFileAsync = promisify(execFile);
 const oxfmtConfig = resolve(dirname(fileURLToPath(import.meta.url)), "../studio.oxfmtrc.json");
-export function validateRouteEdit(value: unknown, graph: PipelineInspection): RouteEdit {
-  if (!value || typeof value !== "object") {
-    throw new Error("A route edit object is required.");
-  }
-  const edit = value as Record<string, unknown>;
-  if (!["insert", "delete", "move", "update"].includes(String(edit.kind))) {
-    throw new Error("Unknown route edit kind.");
-  }
-  const allowed: Record<string, readonly string[]> = {
-    insert: ["kind", "order", "from", "to", "label", "outcome", "when"],
-    delete: ["kind", "order"],
-    move: ["kind", "order", "toOrder"],
-    update: ["kind", "order", "from", "to", "label", "outcome", "when"],
-  };
-  const extra = Object.keys(edit).find((key) => !allowed[String(edit.kind)]!.includes(key));
-  if (extra) {
-    throw new Error(`Unknown route edit property '${extra}'.`);
-  }
-  const integer = (name: string, max: number) => {
-    const result = edit[name];
-    if (!Number.isInteger(result) || Number(result) < 0 || Number(result) > max) {
-      throw new Error(`${name} is out of range.`);
+export const RouteEditRequestSchema = z.strictObject({
+  edit: RouteEditSchema,
+  editRevision: z.string(),
+});
+
+/** Checks graph semantics and maps outgoing-group order to pipeline route order. */
+export function validateRouteEdit(edit: RouteEdit, graph: PipelineInspection): RouteEdit {
+  if (edit.kind === "insert") {
+    requireRouteSemantics(graph, edit.from, edit.to, edit.outcome, edit.label, edit.when);
+    const group = outgoingRouteIndexes(graph, edit.from, edit.outcome);
+    if (edit.order > group.length) {
+      throw new Error("order is out of range.");
     }
-    return Number(result);
-  };
-  const order = edit.kind === "insert" ? undefined : integer("order", graph.routes.length - 1);
+    const last = group.at(-1);
+    return {
+      ...edit,
+      order: group[edit.order] ?? (last === undefined ? graph.routes.length : last + 1),
+    };
+  }
+  const current = graph.routes[edit.order];
+  if (!current) {
+    throw new Error("order is out of range.");
+  }
   if (edit.kind === "delete") {
-    return { kind: "delete", order: order! };
+    return edit;
   }
   if (edit.kind === "move") {
-    const current = graph.routes[order!]!;
     const group = outgoingRouteIndexes(graph, current.source, current.outcome);
-    const currentGroupOrder = group.indexOf(order!);
-    const toGroupOrder = integer("toOrder", group.length - 1);
-    const remaining = graph.routes.map((_, index) => index).filter((index) => index !== order);
-    const remainingGroup = group.filter((index) => index !== order);
+    if (edit.toOrder >= group.length) {
+      throw new Error("toOrder is out of range.");
+    }
+    const remaining = graph.routes.map((_, index) => index).filter((index) => index !== edit.order);
+    const remainingGroup = group.filter((index) => index !== edit.order);
+    const target = remainingGroup[edit.toOrder];
+    const last = remainingGroup.at(-1);
     const globalBoundary =
-      remainingGroup.length === 0
-        ? Math.min(order!, remaining.length)
-        : toGroupOrder < remainingGroup.length
-          ? remaining.indexOf(remainingGroup[toGroupOrder]!)
-          : remaining.indexOf(remainingGroup.at(-1)!) + 1;
-    if (currentGroupOrder < 0 || globalBoundary < 0) {
+      last === undefined
+        ? Math.min(edit.order, remaining.length)
+        : target !== undefined
+          ? remaining.indexOf(target)
+          : remaining.indexOf(last) + 1;
+    if (globalBoundary < 0) {
       throw new Error("The outgoing route order could not be mapped unambiguously.");
     }
-    return { kind: "move", order: order!, toOrder: globalBoundary };
+    return { kind: "move", order: edit.order, toOrder: globalBoundary };
   }
-  const current = edit.kind === "update" ? graph.routes[order!] : undefined;
-  const from = typeof edit.from === "string" ? edit.from : current?.source,
-    to = typeof edit.to === "string" ? edit.to : current?.target;
-  if (
-    !from ||
-    !to ||
-    !graph.nodes.some((node) => node.id === from) ||
-    !graph.nodes.some((node) => node.id === to)
-  ) {
+  requireRouteSemantics(
+    graph,
+    edit.from ?? current.source,
+    edit.to ?? current.target,
+    edit.outcome === null ? undefined : (edit.outcome ?? current.outcome),
+    edit.label ?? current.label,
+    edit.when,
+  );
+  return edit;
+}
+function requireRouteSemantics(
+  graph: PipelineInspection,
+  from: string,
+  to: string,
+  outcome: "success" | "failed" | undefined,
+  label: string,
+  when: string | null | undefined,
+): void {
+  const source = graph.nodes.find((node) => node.id === from);
+  if (!source || !graph.nodes.some((node) => node.id === to)) {
     throw new Error("Route endpoints must be pipeline participants.");
   }
-  const source = graph.nodes.find((node) => node.id === from)!;
   if (source.kind === "completion" || source.kind === "failure") {
     throw new Error("A terminal output cannot have outgoing routes.");
   }
   const needsOutcome = source.kind === "agent" || source.kind === "parallel";
-  const rawOutcome = edit.outcome === null ? undefined : (edit.outcome ?? current?.outcome);
-  const outcome = rawOutcome === "success" || rawOutcome === "failed" ? rawOutcome : undefined;
-  if (rawOutcome !== undefined && outcome === undefined) {
-    throw new Error("Route outcome must be success or failed.");
-  }
-  if (needsOutcome && outcome !== "success" && outcome !== "failed") {
+  if (needsOutcome && outcome === undefined) {
     throw new Error("Agent and parallel routes require a success or failed outcome.");
   }
   if (!needsOutcome && outcome !== undefined) {
     throw new Error("Only agent and parallel routes have standard outcomes.");
   }
-  const label = typeof edit.label === "string" ? edit.label : current?.label;
-  if (!label?.trim()) {
+  if (!label.trim()) {
     throw new Error("Route label must be non-blank.");
   }
-  const normalizedOrder =
-    edit.kind === "insert"
-      ? insertionBoundary(
-          graph,
-          from,
-          outcome,
-          integer("order", outgoingRouteIndexes(graph, from, outcome).length),
-        )
-      : order!;
-  if (
-    edit.when !== undefined &&
-    edit.when !== null &&
-    (typeof edit.when !== "string" || !edit.when.trim())
-  ) {
+  if (typeof when === "string" && !when.trim()) {
     throw new Error("Route predicate must be a non-blank TypeScript expression.");
   }
-  return edit.kind === "insert"
-    ? {
-        kind: "insert",
-        order: normalizedOrder,
-        from,
-        to,
-        label,
-        ...(outcome ? { outcome } : {}),
-        ...(typeof edit.when === "string" ? { when: edit.when } : {}),
-      }
-    : {
-        kind: "update",
-        order: normalizedOrder,
-        ...(edit.from !== undefined ? { from } : {}),
-        ...(edit.to !== undefined ? { to } : {}),
-        ...(edit.label !== undefined ? { label } : {}),
-        ...(edit.outcome !== undefined
-          ? { outcome: edit.outcome as "success" | "failed" | null }
-          : {}),
-        ...(edit.when !== undefined ? { when: edit.when as string | null } : {}),
-      };
 }
 export function outgoingRouteIndexes(
   graph: PipelineInspection,
@@ -134,18 +107,6 @@ export function outgoingRouteIndexes(
   return graph.routes.flatMap((route, index) =>
     route.source === source && route.outcome === outcome ? [index] : [],
   );
-}
-function insertionBoundary(
-  graph: PipelineInspection,
-  source: string,
-  outcome: "success" | "failed" | undefined,
-  groupOrder: number,
-): number {
-  const group = outgoingRouteIndexes(graph, source, outcome);
-  if (group.length === 0) {
-    return graph.routes.length;
-  }
-  return groupOrder < group.length ? group[groupOrder]! : group.at(-1)! + 1;
 }
 export function resolveRouteBoundary(
   sourceIndexes: readonly (number | undefined)[],
@@ -218,12 +179,12 @@ export async function withExactFileRollback<T>(
 export async function applyRouteEdit(
   config: string,
   graph: PipelineInspection,
-  input: unknown,
+  requested: RouteEdit,
   expectedRevision: string,
 ): Promise<LoadResult> {
   let edit: RouteEdit;
   try {
-    edit = validateRouteEdit(input, graph);
+    edit = validateRouteEdit(requested, graph);
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
@@ -318,34 +279,22 @@ export async function formatSourceText(file: string, source: string): Promise<st
 }
 
 export async function typecheckProject(start: string): Promise<string> {
-  let directory = start,
-    config: string | undefined;
-  for (;;) {
-    const candidate = resolve(directory, "tsconfig.json");
-    try {
-      await access(candidate);
-      config = candidate;
-      break;
-    } catch {}
-    const parent = dirname(directory);
-    if (parent === directory) {
-      break;
-    }
-    directory = parent;
-  }
+  const config = ts.findConfigFile(resolve(start), ts.sys.fileExists);
   if (!config) {
     return "No tsconfig.json was found for save validation.";
   }
-  return new Promise((done) => {
-    const child = spawn(
+  try {
+    await execFileAsync(
       process.execPath,
-      [require.resolve("typescript/bin/tsc"), "--noEmit", "--project", config!],
-      { cwd: dirname(config!), env: process.env },
+      [require.resolve("typescript/bin/tsc"), "--noEmit", "--project", config],
+      { cwd: dirname(config), maxBuffer: 16 * 1024 * 1024 },
     );
-    let output = "";
-    child.stdout.on("data", (value) => (output += value));
-    child.stderr.on("data", (value) => (output += value));
-    child.on("close", (code) => done(code === 0 ? "" : output || "TypeScript validation failed."));
-    child.on("error", (error) => done(error.message));
-  });
+    return "";
+  } catch (error) {
+    const output =
+      typeof error === "object" && error !== null && "stdout" in error && "stderr" in error
+        ? `${String(error.stdout)}${String(error.stderr)}`
+        : "";
+    return output || (error instanceof Error ? error.message : String(error));
+  }
 }

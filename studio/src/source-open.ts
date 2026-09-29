@@ -1,47 +1,18 @@
 import { spawn } from "node:child_process";
+import { z } from "zod";
+import { studioEnv } from "./env.js";
 import type { SourceOwnership } from "./ownership.js";
 
-export type SourceTarget =
-  | { readonly kind: "state" }
-  | { readonly kind: "participant"; readonly id: string }
-  | { readonly kind: "callback"; readonly id: string; readonly name: string }
-  | { readonly kind: "route"; readonly order: number };
+export const SourceTargetSchema = z.discriminatedUnion("kind", [
+  z.strictObject({ kind: z.literal("state") }),
+  z.strictObject({ kind: z.literal("participant"), id: z.string() }),
+  z.strictObject({ kind: z.literal("callback"), id: z.string(), name: z.string() }),
+  z.strictObject({ kind: z.literal("route"), order: z.number().int().nonnegative() }),
+]);
+export type SourceTarget = z.infer<typeof SourceTargetSchema>;
 export interface SourceLocation {
   readonly file: string;
   readonly line: number;
-}
-
-export function parseSourceTarget(value: unknown): SourceTarget {
-  if (!value || typeof value !== "object") {
-    throw new Error("A source target is required.");
-  }
-  const target = value as Record<string, unknown>;
-  if (target.kind === "state" && Object.keys(target).length === 1) {
-    return { kind: "state" };
-  }
-  if (
-    target.kind === "participant" &&
-    typeof target.id === "string" &&
-    Object.keys(target).length === 2
-  ) {
-    return { kind: "participant", id: target.id };
-  }
-  if (
-    target.kind === "callback" &&
-    typeof target.id === "string" &&
-    typeof target.name === "string" &&
-    Object.keys(target).length === 3
-  ) {
-    return { kind: "callback", id: target.id, name: target.name };
-  }
-  if (
-    target.kind === "route" &&
-    Number.isInteger(target.order) &&
-    Object.keys(target).length === 2
-  ) {
-    return { kind: "route", order: Number(target.order) };
-  }
-  throw new Error("Invalid source target.");
 }
 
 export function resolveSourceTarget(
@@ -66,13 +37,9 @@ export function resolveSourceTarget(
   return route?.file && route.line ? { file: route.file, line: route.line } : undefined;
 }
 
-export function openSourceLocation(location: SourceLocation, launch: typeof spawn = spawn): void {
-  const configured = process.env.TANDEM_STUDIO_EDITOR;
-  if (configured) {
-    if (/\s/.test(configured)) {
-      throw new Error("TANDEM_STUDIO_EDITOR must be an executable name or path without arguments.");
-    }
-    launch(configured, [`${location.file}:${location.line}`], {
+export function openSourceLocation(location: SourceLocation): void {
+  if (studioEnv.editor) {
+    spawn(studioEnv.editor, [`${location.file}:${location.line}`], {
       detached: true,
       stdio: "ignore",
     }).unref();
@@ -81,5 +48,5 @@ export function openSourceLocation(location: SourceLocation, launch: typeof spaw
   const command =
     process.platform === "darwin" ? "open" : process.platform === "win32" ? "cmd" : "xdg-open";
   const args = process.platform === "win32" ? ["/c", "start", "", location.file] : [location.file];
-  launch(command, args, { detached: true, stdio: "ignore" }).unref();
+  spawn(command, args, { detached: true, stdio: "ignore" }).unref();
 }

@@ -1,18 +1,15 @@
-import { discoverConfig } from "../../src/discovery";
 import { outgoingRouteIndexes, resolveRouteBoundary, validateRouteEdit } from "../../src/edit";
-import { loadPipeline } from "../../src/loader";
-import { editRevision, locateOwnership } from "../../src/ownership";
-export default defineEventHandler(async () => {
+import type { GraphResponse, RouteEditing } from "../../src/graph-response";
+import { editRevision } from "../../src/ownership";
+import { currentOwnership, loadCurrentPipeline } from "../utils/pipeline";
+
+export default defineEventHandler(async (): Promise<GraphResponse> => {
   try {
-    const config = await discoverConfig(
-      process.env.TANDEM_STUDIO_CWD ?? process.cwd(),
-      process.env.TANDEM_STUDIO_CONFIG,
-    );
-    const loaded = await loadPipeline(config);
+    const { config, loaded } = await loadCurrentPipeline();
     if (!loaded.ok) {
-      return { config, ...loaded };
+      return loaded;
     }
-    const ownership = locateOwnership(config, loaded.graph);
+    const ownership = await currentOwnership(config, loaded.graph);
     const indexes = ownership.routes.map((route) =>
       route.editable ? route.sourceIndex : undefined,
     );
@@ -53,7 +50,7 @@ export default defineEventHandler(async () => {
         });
       }),
     );
-    const editing = {
+    const editing: RouteEditing = {
       insertions: insertionGroups,
       moves: loaded.graph.routes.map((route, from) => {
         const count = outgoingRouteIndexes(loaded.graph, route.source, route.outcome).length;
@@ -62,6 +59,7 @@ export default defineEventHandler(async () => {
           const edit = validateRouteEdit({ kind: "move", order: from, toOrder }, loaded.graph);
           return (
             source !== undefined &&
+            edit.kind === "move" &&
             safe(
               indexes.filter((__, index) => index !== from),
               edit.toOrder,

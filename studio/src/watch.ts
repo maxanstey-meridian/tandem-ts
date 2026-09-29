@@ -5,11 +5,14 @@ interface WatchState {
   generation: number;
   watcher: FSWatcher;
   ready: Promise<void>;
+  listeners: Set<(generation: number) => void>;
   debounce?: NodeJS.Timeout;
 }
 export interface GenerationReader {
   (): number;
   readonly ready: Promise<void>;
+  /** Calls `listener` after each debounced TypeScript change; returns the unsubscribe function. */
+  readonly subscribe: (listener: (generation: number) => void) => () => void;
 }
 const projects = new Map<string, WatchState>();
 
@@ -33,7 +36,7 @@ export function watchProjectTypescript(root: string): GenerationReader {
         resolveReady();
       }),
     );
-    const created: WatchState = { generation: 0, watcher, ready };
+    const created: WatchState = { generation: 0, watcher, ready, listeners: new Set() };
     const changed = (path: string) => {
       if (!initialized || !path.endsWith(".ts")) {
         return;
@@ -43,13 +46,23 @@ export function watchProjectTypescript(root: string): GenerationReader {
       }
       created.debounce = setTimeout(() => {
         created.generation += 1;
+        for (const listener of created.listeners) {
+          listener(created.generation);
+        }
       }, 150);
     };
     created.watcher.on("add", changed).on("change", changed).on("unlink", changed);
     projects.set(key, created);
     state = created;
   }
-  return Object.assign(() => state!.generation, { ready: state.ready });
+  const current = state;
+  return Object.assign(() => current.generation, {
+    ready: current.ready,
+    subscribe: (listener: (generation: number) => void) => {
+      current.listeners.add(listener);
+      return () => current.listeners.delete(listener);
+    },
+  });
 }
 
 export async function closeProjectWatchers(): Promise<void> {

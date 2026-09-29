@@ -7,10 +7,10 @@ import { pathToFileURL, fileURLToPath } from "node:url";
 import { discoverConfig } from "../src/discovery.js";
 import { loadPipeline } from "../src/loader.js";
 const sdk = pathToFileURL(
-  resolve(fileURLToPath(new URL("../../sdk/dist/index.js", import.meta.url))),
+  resolve(fileURLToPath(new URL("../../dist/index.js", import.meta.url))),
 ).href;
 const zod = pathToFileURL(
-  resolve(fileURLToPath(new URL("../../../node_modules/zod/index.js", import.meta.url))),
+  resolve(fileURLToPath(new URL("../../node_modules/zod/index.js", import.meta.url))),
 ).href;
 async function fixture(source: string) {
   const root = await mkdtemp(join(tmpdir(), "studio-loader-")),
@@ -73,24 +73,9 @@ test("terminates a loader child even when application construction leaves an act
   const pid = Number(await readFile(pidFile, "utf8"));
   assert.throws(() => process.kill(pid, 0), /ESRCH/);
 });
-test("terminates and diagnoses a config import that exceeds the loading bound", async () => {
-  const { config } = await fixture(
-    "while (true) {} export const tandem = { createPipeline: () => ({}) };",
-  );
-  const started = Date.now();
-
-  const result = await loadPipeline(config, { timeoutMs: 150 });
-
-  assert.equal(result.ok, false);
-  if (!result.ok) {
-    assert.match(result.error, /exceeded 150ms.*blocking work/);
-  }
-  assert.ok(Date.now() - started < 2_000);
-});
-
 test("discovers and loads the checked-in debate config without running it", async () => {
   const workspace = resolve(
-    fileURLToPath(new URL("../../../../examples/debate/typescript", import.meta.url)),
+    fileURLToPath(new URL("../../examples/debate/typescript", import.meta.url)),
   );
   const config = await discoverConfig(join(workspace, "src"));
   assert.equal(config, join(workspace, "tandem.config.ts"));

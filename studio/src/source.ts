@@ -2,33 +2,41 @@ import {
   Project,
   Node,
   QuoteKind,
-  SyntaxKind,
-  type ArrayLiteralExpression,
   type CallExpression,
   type ObjectLiteralExpression,
 } from "ts-morph";
+import { z } from "zod";
+import { pipelineDeclarations } from "./ownership.js";
 
-export type RouteEdit =
-  | { kind: "delete"; order: number }
-  | { kind: "move"; order: number; toOrder: number }
-  | {
-      kind: "update";
-      order: number;
-      from?: string;
-      to?: string;
-      label?: string;
-      outcome?: "success" | "failed" | null;
-      when?: string | null;
-    }
-  | {
-      kind: "insert";
-      order: number;
-      from: string;
-      to: string;
-      label: string;
-      outcome?: "success" | "failed";
-      when?: string;
-    };
+const RouteOutcomeSchema = z.enum(["success", "failed"]);
+
+export const RouteEditSchema = z.discriminatedUnion("kind", [
+  z.strictObject({ kind: z.literal("delete"), order: z.number().int().nonnegative() }),
+  z.strictObject({
+    kind: z.literal("move"),
+    order: z.number().int().nonnegative(),
+    toOrder: z.number().int().nonnegative(),
+  }),
+  z.strictObject({
+    kind: z.literal("update"),
+    order: z.number().int().nonnegative(),
+    from: z.string().optional(),
+    to: z.string().optional(),
+    label: z.string().optional(),
+    outcome: RouteOutcomeSchema.nullable().optional(),
+    when: z.string().nullable().optional(),
+  }),
+  z.strictObject({
+    kind: z.literal("insert"),
+    order: z.number().int().nonnegative(),
+    from: z.string(),
+    to: z.string(),
+    label: z.string(),
+    outcome: RouteOutcomeSchema.optional(),
+    when: z.string().optional(),
+  }),
+]);
+export type RouteEdit = z.infer<typeof RouteEditSchema>;
 
 export async function editDirectRoute(
   file: string,
@@ -40,28 +48,17 @@ export async function editDirectRoute(
     tsConfigFilePath: undefined,
   });
   const source = project.addSourceFileAtPath(file);
-  const arrays = source
-    .getDescendantsOfKind(SyntaxKind.CallExpression)
-    .filter((call) => call.getExpression().getText() === "pipeline")
-    .map((call) => call.getArguments()[0])
-    .filter(Node.isObjectLiteralExpression)
-    .filter((object) => {
-      const property = object.getProperty("name");
-      const initializer = Node.isPropertyAssignment(property)
-        ? property.getInitializer()
-        : undefined;
-      return Node.isStringLiteral(initializer) && initializer.getLiteralValue() === pipelineName;
-    })
+  const arrays = pipelineDeclarations([source], pipelineName)
     .map((object) => object.getProperty("routes"))
     .filter(Node.isPropertyAssignment)
     .map((property) => property.getInitializer())
     .filter(Node.isArrayLiteralExpression);
-  if (arrays.length !== 1) {
+  const [array] = arrays;
+  if (!array || arrays.length !== 1) {
     throw new Error(
       "Routes are read-only: a single direct pipeline routes array could not be identified.",
     );
   }
-  const array = arrays[0] as ArrayLiteralExpression;
   if (edit.kind === "insert") {
     const properties = [
       `from: ${edit.from}`,

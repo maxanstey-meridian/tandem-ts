@@ -1,30 +1,20 @@
 import { access } from "node:fs/promises";
-import { dirname, isAbsolute, resolve } from "node:path";
+import { resolve } from "node:path";
+import { ts } from "ts-morph";
 
 export async function discoverConfig(start: string, explicit?: string): Promise<string> {
   if (explicit) {
-    const candidate = isAbsolute(explicit) ? explicit : resolve(start, explicit);
-    await requireFile(candidate);
-    return candidate;
-  }
-  let directory = resolve(start);
-  for (;;) {
-    const candidate = resolve(directory, "tandem.config.ts");
+    const candidate = resolve(start, explicit);
     try {
       await access(candidate);
-      return candidate;
-    } catch {}
-    const parent = dirname(directory);
-    if (parent === directory) {
-      throw new Error(`No tandem.config.ts found from '${start}'.`);
+    } catch {
+      throw new Error(`Tandem config '${candidate}' does not exist.`);
     }
-    directory = parent;
+    return candidate;
   }
-}
-async function requireFile(path: string): Promise<void> {
-  try {
-    await access(path);
-  } catch {
-    throw new Error(`Tandem config '${path}' does not exist.`);
+  const found = ts.findConfigFile(resolve(start), ts.sys.fileExists, "tandem.config.ts");
+  if (!found) {
+    throw new Error(`No tandem.config.ts found from '${start}'.`);
   }
+  return resolve(found);
 }
