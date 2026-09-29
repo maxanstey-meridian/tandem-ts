@@ -316,20 +316,24 @@ test("TypeScript terminal presentation truncates configured tool arguments", asy
   assert.equal(result.accepted, true);
 });
 
-test("rolls back durable acceptance when JavaScript state application faults", async () => {
+// The ledger is run history, not a unit of work: acceptance is journaled before the JavaScript
+// apply runs, so a failed apply faults the run and leaves the acceptance on record.
+test("faults the run and keeps the acceptance in history when JavaScript state application fails", async () => {
   for (const mode of ["capability", "output"]) {
-    const result = await runChild("acceptance-atomicity-child.mjs", [mode]);
+    const result = await runChild("acceptance-apply-failure-child.mjs", [mode]);
     assert.equal(result.applyCalled, true);
-    assert.match(result.error, /apply failed after durable acceptance/);
-    assert.equal(result.persistedAcceptance, false);
+    assert.match(result.error, /apply failed after acceptance/);
+    assert.equal(result.status, "Faulted");
+    assert.equal(result.recordedAcceptance, true);
   }
 });
 
-test("rejects lossy capability and output applied state before commit", async () => {
+test("rejects lossy capability and output applied state and faults the run", async () => {
   for (const mode of ["capability-json", "output-json"]) {
-    const result = await runChild("acceptance-atomicity-child.mjs", [mode]);
+    const result = await runChild("acceptance-apply-failure-child.mjs", [mode]);
     assert.equal(result.applyCalled, true);
     assert.match(result.error, /applied state validation failed/);
-    assert.equal(result.persistedAcceptance, false);
+    assert.equal(result.status, "Faulted");
+    assert.equal(result.recordedAcceptance, true);
   }
 });

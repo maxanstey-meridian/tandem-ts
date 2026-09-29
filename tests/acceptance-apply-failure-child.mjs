@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
-import { agent, capability, output, pipeline, route, run } from "../dist/index.js";
+import { agent, capability, inspectAccepted, output, pipeline, route, run } from "../dist/index.js";
 import {
   startFakeOpenAi,
   writeChatCompletion,
@@ -14,7 +14,7 @@ import {
 const mode = process.argv[2];
 const capabilityMode = mode.startsWith("capability");
 const jsonLossMode = mode.endsWith("json");
-const directory = mkdtempSync(join(tmpdir(), "tandem-atomicity-"));
+const directory = mkdtempSync(join(tmpdir(), "tandem-apply-failure-"));
 const ledgerPath = join(directory, "ledger.sqlite3");
 const server = await startFakeOpenAi(({ url }, response) => {
   if (url === "/v1/models") return writeModels(response, "gpt-5.6-sol");
@@ -38,7 +38,7 @@ const submit = capability({
     if (jsonLossMode) {
       return { value: Number.NaN };
     }
-    throw new Error("apply failed after durable acceptance");
+    throw new Error("apply failed after acceptance");
   },
   summarize: ({ rationale }) => rationale,
 });
@@ -63,7 +63,7 @@ const worker = agent({
           if (jsonLossMode) {
             return { value: Number.NaN };
           }
-          throw new Error("apply failed after durable acceptance");
+          throw new Error("apply failed after acceptance");
         },
       }
     : undefined,
@@ -72,7 +72,7 @@ const worker = agent({
 const done = output({ id: "done", summary: () => "done" });
 const failed = output({ id: "failed", failed: true, summary: () => "failed" });
 const graph = pipeline({
-  name: `atomic-${mode}`,
+  name: `apply-failure-${mode}`,
   state: State,
   nodes: [worker, done, failed],
   start: worker,
@@ -93,15 +93,18 @@ try {
     error = String(caught);
   }
   const db = new DatabaseSync(ledgerPath, { readOnly: true });
-  const entries = db.prepare("select payload from run_entries order by sequence").all();
+  const { run_id: runId, status } = db.prepare("select run_id, status from runs").get();
   db.close();
-  const records = entries.map(({ payload }) => JSON.parse(Buffer.from(payload).toString("utf8")));
+  const accepted = await inspectAccepted({ ledgerPath, runId });
   console.log(
     JSON.stringify({
       error,
       succeeded,
       applyCalled,
-      persistedAcceptance: records.some(({ kind }) => kind === (capabilityMode ? 13 : 12)),
+      status,
+      recordedAcceptance: accepted.some(
+        ({ kind }) => kind === (capabilityMode ? "CapabilityAccepted" : "StructuredOutputAccepted"),
+      ),
     }),
   );
 } finally {
