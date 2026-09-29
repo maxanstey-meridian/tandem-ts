@@ -818,10 +818,7 @@ class AgentWorkspaceImplementation<TState> implements AgentWorkspace<TState> {
       | ((state: TState) => readonly AgentCommand[])
       | undefined,
   ) {
-    this.commandSource =
-      typeof commandSource === "function" || commandSource === undefined
-        ? commandSource
-        : commandSource.map(copyAgentCommand);
+    this.commandSource = commandSource;
     this.commands = { [commandSelectionBrand]: this };
   }
   withTools(
@@ -864,64 +861,34 @@ export function agentWorkspace<TState>(definition: {
   if (typeof definition.path !== "function") {
     throw new TandemError("Workspace path is required.");
   }
-  if (definition.commands !== undefined && typeof definition.commands !== "function") {
-    validateAgentCommands(definition.commands, "Workspace commands");
-  }
-  return new AgentWorkspaceImplementation(definition.path, definition.commands);
+  // Parsing copies a static catalogue, so later mutation by the caller cannot change it.
+  const commands =
+    typeof definition.commands === "function" || definition.commands === undefined
+      ? definition.commands
+      : parseDefinition(agentCommandsSchema, definition.commands, "Workspace commands");
+  return new AgentWorkspaceImplementation(definition.path, commands);
 }
 
-function copyAgentCommand(command: AgentCommand): AgentCommand {
-  return command.arguments === undefined
-    ? { ...command }
-    : {
-        ...command,
-        arguments: [...command.arguments],
-      };
-}
-
-function validateAgentCommands(
-  commands: unknown,
-  context: string,
-): asserts commands is readonly AgentCommand[] {
-  if (!Array.isArray(commands)) {
-    throw new TandemError(`${context} must be an array.`);
-  }
-  for (const [commandIndex, command] of commands.entries()) {
-    const commandContext = `${context}[${commandIndex}]`;
-    if (typeof command !== "object" || command === null) {
-      throw new TandemError(`${commandContext} must be a command.`);
-    }
-    const candidate = command as Partial<AgentCommand>;
-    if (typeof candidate.name !== "string" || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(candidate.name)) {
-      throw new TandemError(`${commandContext}.name must be a valid tool name.`);
-    }
-    if (typeof candidate.description !== "string" || candidate.description.trim().length === 0) {
-      throw new TandemError(`${commandContext}.description must be non-blank.`);
-    }
-    if (typeof candidate.command !== "string" || candidate.command.trim().length === 0) {
-      throw new TandemError(`${commandContext}.command must be non-blank.`);
-    }
-    if (candidate.arguments !== undefined && !Array.isArray(candidate.arguments)) {
-      throw new TandemError(`${commandContext}.arguments must be an array of strings.`);
-    }
-    const argumentList = candidate.arguments ?? [];
-    if (argumentList.length > 16) {
-      throw new TandemError(`${commandContext}.arguments accepts at most 16 arguments.`);
-    }
-    for (const [argumentIndex, argument] of argumentList.entries()) {
-      const argumentContext = `${commandContext}.arguments[${argumentIndex}]`;
-      if (typeof argument !== "string") {
-        throw new TandemError(`${argumentContext} must be a string.`);
-      }
-      if (argument.trim().length === 0) {
-        throw new TandemError(`${argumentContext} must not be blank.`);
-      }
-      if (argument.length > 200) {
-        throw new TandemError(`${argumentContext} must be at most 200 characters.`);
-      }
-    }
-  }
-}
+const agentCommandsSchema = z.array(
+  z.strictObject({
+    name: z
+      .string({ error: "must be a valid tool name" })
+      .regex(/^[A-Za-z_][A-Za-z0-9_]*$/, { error: "must be a valid tool name" }),
+    description: nonBlankString,
+    command: nonBlankString,
+    arguments: z
+      .array(
+        z
+          .string({ error: "must be a string" })
+          .refine((value) => value.trim().length > 0, { error: "must not be blank" })
+          .max(200, { error: "must be at most 200 characters" }),
+        { error: "must be an array of strings" },
+      )
+      .max(16, { error: "accepts at most 16 arguments" })
+      .optional(),
+  }),
+  { error: "must be an array" },
+);
 const skillSchema = z.object({ directory: nonBlankString });
 export function skill(definition: { readonly directory: string }): AgentSkill {
   return parseDefinition(skillSchema, definition, "Skill");
@@ -2130,25 +2097,15 @@ function compileWorkspace<TState>(
   });
   const commandsCallback = callbacks.registerSync((state) => {
     const typedState = parseJson(stateSchema, state, `${id} workspace commands state`);
-    const value =
+    const commands =
       typeof workspace.commandSource === "function"
-        ? workspace.commandSource(typedState)
+        ? parseDefinition(
+            agentCommandsSchema,
+            workspace.commandSource(typedState),
+            `Agent '${id}' workspace commands`,
+          )
         : (workspace.commandSource ?? []);
-    validateAgentCommands(value, `Agent '${id}' workspace commands`);
-    return serializeBoundary(
-      z.array(
-        z
-          .object({
-            name: z.string(),
-            description: z.string(),
-            command: z.string(),
-            arguments: z.array(z.string()).optional(),
-          })
-          .strict(),
-      ),
-      value,
-      `${id} workspace commands`,
-    );
+    return JSON.stringify(commands);
   });
   const selected = new Set<AgentToolSelection>();
   const toolGroups = configuration.groups.map((group, index) => {

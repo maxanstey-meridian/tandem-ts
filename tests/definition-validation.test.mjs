@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { z } from "zod";
 import {
   agent,
+  agentWorkspace,
   capability,
   collection,
   ContractValidationError,
@@ -293,3 +294,41 @@ refusals(skill, [
   ["a blank skill directory", { directory: " " }, /Skill directory must be a non-blank string/],
   ["a non-string skill directory", { directory: 1 }, /Skill directory/],
 ]);
+
+const command = { name: "run_tests", description: "Run tests.", command: "task test" };
+refusals(
+  (commands) => agentWorkspace({ path: () => "/tmp", commands }),
+  [
+    ["a non-array command catalogue", {}, /Workspace commands must be an array/],
+    ["a non-object command", [42], /Workspace commands\[0\]/],
+    [
+      "an invalid command name",
+      [{ ...command, name: "run-tests" }],
+      /\[0\] name must be a valid tool name/,
+    ],
+    [
+      "a blank command description",
+      [{ ...command, description: " " }],
+      /description must be a non-blank string/,
+    ],
+    ["a blank command", [{ ...command, command: "" }], /command must be a non-blank string/],
+    ["an unknown command key", [{ ...command, shell: true }], /Workspace commands\[0\]/],
+    [
+      "non-array arguments",
+      [{ ...command, arguments: 42 }],
+      /arguments must be an array of strings/,
+    ],
+    [
+      "more than 16 arguments",
+      [{ ...command, arguments: Array.from({ length: 17 }, (_, i) => `a${i}`) }],
+      /arguments accepts at most 16 arguments/,
+    ],
+    ["a non-string argument", [{ ...command, arguments: [42] }], /arguments\[0\] must be a string/],
+    ["a blank argument", [{ ...command, arguments: ["  "] }], /arguments\[0\] must not be blank/],
+    [
+      "an argument over 200 characters",
+      [{ ...command, arguments: ["a".repeat(201)] }],
+      /arguments\[0\] must be at most 200 characters/,
+    ],
+  ],
+);
