@@ -666,6 +666,17 @@ export interface AgentToolInvocation {
   readonly effect: AgentToolEffect;
   readonly arguments: unknown;
 }
+const agentToolInvocationSchema = z.strictObject({
+  name: z.string(),
+  effect: z.enum([
+    "read",
+    "workspaceMutation",
+    "processExecution",
+    "lifecycleTransition",
+    "unclassified",
+  ]),
+  arguments: z.unknown(),
+}) satisfies z.ZodType<AgentToolInvocation>;
 export type AgentToolInterceptor<TState> = (
   state: TState,
   invocation: AgentToolInvocation,
@@ -1072,11 +1083,11 @@ export function pipeline<TState>(definition: {
   const start = definition.start as Node<TState>;
   const members = new Set<Node<TState>>(definition.nodes);
   if (members.size !== definition.nodes.length) {
-    throw new Error("Pipeline nodes must contain each participant object exactly once.");
+    throw new TandemError("Pipeline nodes must contain each participant object exactly once.");
   }
   const ids = new Set(definition.nodes.map((node) => node.id));
   if (ids.size !== definition.nodes.length) {
-    throw new Error("Pipeline node IDs must be unique.");
+    throw new TandemError("Pipeline node IDs must be unique.");
   }
   const ownedParticipants = new Set<Stage<TState> | Agent<TState>>();
   for (const node of definition.nodes.map(nodeRecord)) {
@@ -1085,30 +1096,36 @@ export function pipeline<TState>(definition: {
     }
     for (const participant of Object.values(node.branches)) {
       if (members.has(participant)) {
-        throw new Error(
+        throw new TandemError(
           `Parallel branch participant '${participant.id}' cannot also be a parent pipeline node.`,
         );
       }
       if (!ownedParticipants.add(participant)) {
-        throw new Error(`Parallel branch participant '${participant.id}' is owned more than once.`);
+        throw new TandemError(
+          `Parallel branch participant '${participant.id}' is owned more than once.`,
+        );
       }
       if (ids.has(participant.id)) {
-        throw new Error(`Pipeline participant ID '${participant.id}' must be globally unique.`);
+        throw new TandemError(
+          `Pipeline participant ID '${participant.id}' must be globally unique.`,
+        );
       }
       ids.add(participant.id);
     }
   }
   if (!members.has(definition.start)) {
-    throw new Error(
+    throw new TandemError(
       `Pipeline start '${definition.start.id}' must be the registered participant object.`,
     );
   }
   if (start.kind === "terminal") {
-    throw new Error(`Pipeline start '${start.id}' cannot be a terminal.`);
+    throw new TandemError(`Pipeline start '${start.id}' cannot be a terminal.`);
   }
   for (const item of definition.routes) {
     if (!members.has(item.from) || !members.has(item.to)) {
-      throw new Error(`Route '${item.label}' endpoints must be registered participant objects.`);
+      throw new TandemError(
+        `Route '${item.label}' endpoints must be registered participant objects.`,
+      );
     }
   }
   const unconditionalRoutes = new Map<string, Route<TState>>();
@@ -1119,24 +1136,23 @@ export function pipeline<TState>(definition: {
     const key = `${item.from.id}\u0000${item.outcome ?? "default"}`;
     const existing = unconditionalRoutes.get(key);
     if (existing) {
-      throw new Error(
+      throw new TandemError(
         `Routes '${existing.label}' and '${item.label}' are both unconditional from '${item.from.id}'.`,
       );
     }
     unconditionalRoutes.set(key, item);
   }
   if (new Set(definition.outputs).size !== definition.outputs.length) {
-    throw new Error("Pipeline outputs must contain each terminal exactly once.");
+    throw new TandemError("Pipeline outputs must contain each terminal exactly once.");
   }
   for (const item of definition.outputs) {
     if (!members.has(item)) {
-      throw new Error(`Output '${item.id}' must be the registered participant object.`);
+      throw new TandemError(`Output '${item.id}' must be the registered participant object.`);
     }
   }
   const reachable = new Set<Node<TState>>([start]);
   const pending: Node<TState>[] = [start];
-  while (pending.length > 0) {
-    const source = pending.pop()!;
+  for (let source = pending.pop(); source !== undefined; source = pending.pop()) {
     for (const item of definition.routes) {
       if (item.from === source && !reachable.has(item.to)) {
         reachable.add(item.to);
@@ -1147,12 +1163,12 @@ export function pipeline<TState>(definition: {
   const outputs = new Set<Node<TState>>(definition.outputs);
   for (const node of reachable) {
     if (node.kind === "terminal" && !outputs.has(node)) {
-      throw new Error(`Reachable terminal '${node.id}' must be listed in outputs.`);
+      throw new TandemError(`Reachable terminal '${node.id}' must be listed in outputs.`);
     }
   }
   for (const item of definition.outputs) {
     if (!reachable.has(item)) {
-      throw new Error(`Output '${item.id}' must be reachable from start '${start.id}'.`);
+      throw new TandemError(`Output '${item.id}' must be reachable from start '${start.id}'.`);
     }
   }
   return { ...definition, persist: definition.persist ?? false };
@@ -1371,12 +1387,15 @@ const runResultSchema = z
   })
   .strict();
 
+/** Lazy (and cached by the module loader) so importing the authoring API never starts .NET. */
+const loadRuntime = () => import("./runtime/loader.mjs");
+
 export async function inspectAccepted(options: {
   ledgerPath: string;
   runId: string;
 }): Promise<readonly AcceptedValue[]> {
   try {
-    const { inspectAcceptedAsync } = await import("./runtime/loader.mjs");
+    const { inspectAcceptedAsync } = await loadRuntime();
     return parseJson(
       acceptedValuesSchema,
       await inspectAcceptedAsync(options.ledgerPath, options.runId),
@@ -1409,20 +1428,17 @@ export async function run<TState>(
   const callbacks = new CallbackRegistry();
   try {
     const nodes = graph.nodes.map((node) => compileNode(node, graph.state, callbacks));
-    const routes = graph.routes.map((item) => {
-      const callback = item.when
+    const routes = graph.routes.map(({ from, to, label, outcome, when }) => ({
+      source: from.id,
+      target: to.id,
+      label,
+      outcome,
+      predicateCallback: when
         ? callbacks.registerSync((state) =>
-            String(item.when!(parseJson(graph.state, state, `route '${item.label}' state`))),
+            String(when(parseJson(graph.state, state, `route '${label}' state`))),
           )
-        : undefined;
-      return {
-        source: item.from.id,
-        target: item.to.id,
-        label: item.label,
-        outcome: item.outcome,
-        predicateCallback: callback,
-      };
-    });
+        : undefined,
+    }));
     const handlerEntries = interactionHandlerEntries(options.interactions);
     const members = new Set<object>(graph.nodes);
     const interactionHandlers = handlerEntries.map((entry, index) => {
@@ -1442,7 +1458,8 @@ export async function run<TState>(
       });
       return { id: `h${index}`, target: entry.interaction.id, handleCallback };
     });
-    const observationCallback = options.observe
+    const { observe } = options;
+    const observationCallback = observe
       ? callbacks.registerAsync(async (_, input, signal) => {
           const event = parseJson(runObservationSchema, input, "run observation");
           const observationSignal =
@@ -1451,11 +1468,11 @@ export async function run<TState>(
               : event.kind === "stepCancelled" && !signal.aborted
                 ? AbortSignal.abort()
                 : signal;
-          await options.observe!(event, { signal: observationSignal });
+          await observe(event, { signal: observationSignal });
           return "";
         })
       : undefined;
-    const { runRegisteredGraphAsync } = await import("./runtime/loader.mjs");
+    const { runRegisteredGraphAsync } = await loadRuntime();
     const resultJson = await runRegisteredGraphAsync(
       JSON.stringify({
         contractVersion: 10,
@@ -1511,18 +1528,8 @@ function participantPersists<TState>(node: Node<TState>): boolean {
 }
 
 function issues<T>(schema: z.ZodType<T>, input: string): string {
-  let value: unknown;
   try {
-    value = JSON.parse(input);
-  } catch {
-    return JSON.stringify([{ path: "$", message: "Invalid JSON" }]);
-  }
-  return issuesParsed(schema, value);
-}
-
-function issuesParsed<T>(schema: z.ZodType<T>, value: unknown): string {
-  try {
-    parse(schema, value, "agent contract");
+    parseJson(schema, input, "agent contract");
     return "";
   } catch (error) {
     if (error instanceof ContractValidationError) {
@@ -1692,7 +1699,7 @@ function compileCollection<TState>(
         signal.throwIfAborted();
         active = true;
         try {
-          const { runCollectionAgentAsync } = await import("./runtime/loader.mjs");
+          const { runCollectionAgentAsync } = await loadRuntime();
           const response = await runCollectionAgentAsync(
             scopeId,
             task.id,
@@ -1854,11 +1861,10 @@ function compileWorkspace<TState>(
         includeCommands = true;
       }
     }
-    const whenCallback = group.predicate
+    const { predicate } = group;
+    const whenCallback = predicate
       ? callbacks.registerSync((state) => {
-          const value = group.predicate!(
-            parseJson(stateSchema, state, `${id} tool group ${index} state`),
-          );
+          const value = predicate(parseJson(stateSchema, state, `${id} tool group ${index} state`));
           if (typeof value !== "boolean") {
             throw new TandemError(
               `Agent '${id}' tool group ${index} predicate must return a boolean.`,
@@ -1869,16 +1875,14 @@ function compileWorkspace<TState>(
       : undefined;
     return { tools, includeCommands, whenCallback };
   });
-  const interceptCallback = configuration.interceptTool
+  const { interceptTool } = configuration;
+  const interceptCallback = interceptTool
     ? callbacks.registerAsync(async (state, input, signal) => {
-        const typedState = parseJson(stateSchema, state, `${id} tool interception state`);
-        let invocation: AgentToolInvocation;
-        try {
-          invocation = JSON.parse(input) as AgentToolInvocation;
-        } catch {
-          throw new TandemError(`Agent '${id}' received an invalid tool interception payload.`);
-        }
-        const result = await configuration.interceptTool!(typedState, invocation, { signal });
+        const result = await interceptTool(
+          parseJson(stateSchema, state, `${id} tool interception state`),
+          parseJson(agentToolInvocationSchema, input, `${id} tool interception payload`),
+          { signal },
+        );
         if (result !== null && typeof result !== "string") {
           throw new TandemError(`Agent '${id}' tool interceptor must return a string or null.`);
         }
@@ -1890,62 +1894,48 @@ function compileWorkspace<TState>(
 
 function compileAgentOutput<TState, TOutput>(
   id: string,
-  output: {
-    instructions: string;
-    schema?: z.ZodType<TOutput>;
-    raw?: true;
-    parse?: (response: string) => TOutput;
-    validateFor?: (state: TState, output: TOutput) => readonly ValidationProblem[];
-    apply: (state: TState, output: TOutput) => TState;
-  },
+  output: NonNullable<AgentDefinition<TState, TOutput>["output"]>,
   stateSchema: z.ZodType<TState>,
   callbacks: CallbackRegistry,
 ): object {
-  const raw = output.raw === true;
-  const validate = raw
-    ? callbacks.registerSync((_, input) =>
-        issuesParsed(
-          z.unknown(),
-          (output.parse as (response: string) => TOutput)(JSON.parse(input) as string),
-        ),
-      )
-    : callbacks.registerSync((_, input) => issues(output.schema!, input));
-  const validateFor = output.validateFor
-    ? callbacks.registerSync((state, input) =>
-        validationProblems(
-          output.validateFor!(
-            parseJson(stateSchema, state, `${id} state`),
-            raw ? (JSON.parse(input) as TOutput) : parseJson(output.schema!, input, `${id} output`),
-          ),
-          `${id} output contextual validation`,
-        ),
-      )
-    : undefined;
-  const apply = callbacks.registerSync((state, input) =>
-    serializeBoundary(
-      stateSchema,
-      output.apply(
-        parseJson(stateSchema, state, `${id} state`),
-        raw ? (JSON.parse(input) as TOutput) : parseJson(output.schema!, input, `${id} output`),
-      ),
-      `${id} applied state`,
-    ),
-  );
+  let decode: (input: string) => TOutput;
+  let format: object;
+  if ("raw" in output) {
+    const { parse } = output;
+    // The bridge hands back exactly the JSON that rawParseCallback produced from `parse`.
+    decode = (input) => JSON.parse(input) as TOutput;
+    format = {
+      raw: true,
+      rawParseCallback: callbacks.registerSync((_, input) => JSON.stringify(parse(input))),
+    };
+  } else {
+    const { schema } = output;
+    decode = (input) => parseJson(schema, input, `${id} output`);
+    format = {
+      jsonSchema: inputJsonSchema(schema, `${id} output schema`),
+      validateCallback: callbacks.registerSync((_, input) => issues(schema, input)),
+    };
+  }
+  const { validateFor, apply } = output;
+  const parseState = (state: string) => parseJson(stateSchema, state, `${id} state`);
   return {
     instructions: output.instructions,
-    ...(raw
-      ? {
-          raw: true,
-          rawParseCallback: callbacks.registerSync((_, input) =>
-            JSON.stringify((output.parse as (response: string) => TOutput)(input)),
+    ...format,
+    validateForCallback: validateFor
+      ? callbacks.registerSync((state, input) =>
+          validationProblems(
+            validateFor(parseState(state), decode(input)),
+            `${id} output contextual validation`,
           ),
-        }
-      : {
-          jsonSchema: inputJsonSchema(output.schema!, `${id} output schema`),
-          validateCallback: validate,
-        }),
-    validateForCallback: validateFor,
-    applyCallback: apply,
+        )
+      : undefined,
+    applyCallback: callbacks.registerSync((state, input) =>
+      serializeBoundary(
+        stateSchema,
+        apply(parseState(state), decode(input)),
+        `${id} applied state`,
+      ),
+    ),
     valueType: `${id}.output`,
   };
 }
