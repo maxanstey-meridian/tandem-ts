@@ -1,7 +1,8 @@
+import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import { z } from "zod";
 
-const request = JSON.parse(process.argv[2]);
+const request = JSON.parse(readFileSync(process.argv[2], "utf8"));
 const context = vm.createContext(Object.create(null), {
   codeGeneration: { strings: false, wasm: false },
 });

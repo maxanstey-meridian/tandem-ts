@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -53,11 +53,14 @@ const describeFailure = (error: unknown): string => {
 export const assessImplementation = async (source: string): Promise<VerificationResult> => {
   const directory = await mkdtemp(join(tmpdir(), "tandem-function-assessment-"));
   try {
+    // Passed as a file, not argv: argv has an OS size limit that a large source would exceed.
+    const requestPath = join(directory, "request.json");
+    await writeFile(requestPath, JSON.stringify({ source, cases }));
     let stdout: string;
     try {
       ({ stdout } = await execFileAsync(
         process.execPath,
-        [workerPath, JSON.stringify({ source, cases })],
+        [workerPath, requestPath],
         { cwd: directory, env: {}, timeout: timeoutMs, maxBuffer: outputLimit, killSignal: "SIGKILL" },
       ));
     } catch (error) {
