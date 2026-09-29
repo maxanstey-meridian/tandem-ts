@@ -7,10 +7,10 @@ import { pathToFileURL, fileURLToPath } from "node:url";
 import { discoverConfig } from "../src/discovery.js";
 import { loadPipeline } from "../src/loader.js";
 const sdk = pathToFileURL(
-  resolve(fileURLToPath(new URL("../../sdk/dist/index.js", import.meta.url))),
+  resolve(fileURLToPath(new URL("../../dist/index.js", import.meta.url))),
 ).href;
 const zod = pathToFileURL(
-  resolve(fileURLToPath(new URL("../../../node_modules/zod/index.js", import.meta.url))),
+  resolve(fileURLToPath(new URL("../../node_modules/zod/index.js", import.meta.url))),
 ).href;
 async function fixture(source: string) {
   const root = await mkdtemp(join(tmpdir(), "studio-loader-")),
@@ -90,7 +90,7 @@ test("terminates and diagnoses a config import that exceeds the loading bound", 
 
 test("discovers and loads the checked-in debate config without running it", async () => {
   const workspace = resolve(
-    fileURLToPath(new URL("../../../../examples/debate/typescript", import.meta.url)),
+    fileURLToPath(new URL("../../examples/debate/typescript", import.meta.url)),
   );
   const config = await discoverConfig(join(workspace, "src"));
   assert.equal(config, join(workspace, "tandem.config.ts"));

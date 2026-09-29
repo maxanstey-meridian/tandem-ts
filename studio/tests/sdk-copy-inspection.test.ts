@@ -7,7 +7,7 @@ import { pathToFileURL, fileURLToPath } from "node:url";
 import { z } from "zod";
 
 test("inspection preserves every semantic kind across a separate physical SDK module copy", async () => {
-  const source = fileURLToPath(new URL("../../sdk/dist/index.js", import.meta.url));
+  const source = fileURLToPath(new URL("../../dist/index.js", import.meta.url));
   const directory = await mkdtemp(path.join(path.dirname(source), "copy-"));
   const copy = path.join(directory, "index.mjs");
   await copyFile(source, copy);
