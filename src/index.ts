@@ -367,6 +367,13 @@ function inputJsonSchema<T>(schema: z.ZodType<T>, boundary: string): string {
   }
 }
 
+const positiveInt32 = z.int32({ error: "must be a positive 32-bit integer" }).min(1);
+const nonBlankString = z
+  .string({ error: "must be a non-blank string" })
+  .refine((value) => value.trim().length > 0, { error: "must be a non-blank string" });
+const hasUnique = <T>(items: readonly T[], key: (item: T) => unknown): boolean =>
+  new Set(items.map(key)).size === items.length;
+
 interface Participant<TState> {
   readonly id: string;
   readonly [participantBrand]: (state: TState) => TState;
@@ -514,15 +521,16 @@ class CollectionImplementation<TState, TItem, TResult>
     super(definition.id, definition.persist);
   }
 }
+const collectionOptionsSchema = z.object({
+  max: positiveInt32,
+  agents: z
+    .array(z.object({ id: z.string() }))
+    .refine((agents) => hasUnique(agents, (agent) => agent.id), { error: "must have unique IDs" }),
+});
 export function collection<TState, TItem, TResult>(
   definition: CollectionDefinition<TState, TItem, TResult>,
 ): Collection<TState> {
-  if (!Number.isInteger(definition.max) || definition.max < 1 || definition.max > 2147483647) {
-    throw new TandemError("Collection max must be a positive 32-bit integer.");
-  }
-  if (new Set(definition.agents.map((agent) => agent.id)).size !== definition.agents.length) {
-    throw new TandemError("Collection agent IDs must be unique.");
-  }
+  parseDefinition(collectionOptionsSchema, definition, `Collection '${definition.id}'`);
   return new CollectionImplementation(definition);
 }
 
@@ -914,11 +922,9 @@ function validateAgentCommands(
     }
   }
 }
+const skillSchema = z.object({ directory: nonBlankString });
 export function skill(definition: { readonly directory: string }): AgentSkill {
-  if (typeof definition.directory !== "string" || definition.directory.trim().length === 0) {
-    throw new TandemError("Skill directory must be a non-blank string.");
-  }
-  return { directory: definition.directory };
+  return parseDefinition(skillSchema, definition, "Skill");
 }
 export interface AgentDefinition<TState, TOutput = never> {
   readonly id: string;
@@ -998,6 +1004,78 @@ class AgentImplementation<TState, TOutput>
     super(id, persist);
   }
 }
+const capabilityReference = z.custom<{ readonly name: string }>();
+const agentOutputSchema = z.discriminatedUnion(
+  "raw",
+  [
+    z.object({
+      raw: z.literal(true),
+      schema: z.undefined({ error: "is forbidden for raw output" }).optional(),
+      parse: z.custom((value) => typeof value === "function", {
+        error: "must be a function for raw output",
+      }),
+    }),
+    z.object({
+      raw: z.undefined().optional(),
+      parse: z.undefined({ error: "requires raw output mode" }).optional(),
+    }),
+  ],
+  { error: "must be true" },
+);
+const agentOptionsSchema = z
+  .object({
+    output: agentOutputSchema.optional(),
+    reasoning: z
+      .object({
+        effort: z
+          .enum(["none", "low", "medium", "high"], {
+            error: "must be 'none', 'low', 'medium' or 'high'",
+          })
+          .optional(),
+        maxTokens: z
+          .int32({ error: "must be a 32-bit integer of at least 1024" })
+          .min(1024)
+          .optional(),
+      })
+      .refine((value) => (value.effort === undefined) !== (value.maxTokens === undefined), {
+        error: "must specify exactly one of effort or maxTokens",
+      })
+      .optional(),
+    capabilities: z
+      .array(capabilityReference)
+      .refine((items) => hasUnique(items, (item) => item.name), {
+        error: "must not contain a duplicate capability",
+      })
+      .optional(),
+    skills: z
+      .array(skillSchema)
+      .refine((items) => hasUnique(items, (item) => item.directory), {
+        error: "must not repeat a skill directory",
+      })
+      .optional(),
+    temperature: z.number({ error: "must be between 0 and 2" }).min(0).max(2).optional(),
+    maxOutputTokens: positiveInt32.optional(),
+    checkpoint: z
+      .object({
+        contextWindowTokens: positiveInt32,
+        maxOutputTokens: positiveInt32,
+        checkpointAtPercent: z.int({ error: "must be between 1 and 99" }).min(1).max(99),
+        capability: capabilityReference,
+        session: z.enum(["retain", "reset"], { error: "must be 'retain' or 'reset'" }).optional(),
+        disableCompaction: z.boolean({ error: "must be a boolean" }).optional(),
+      })
+      .refine((value) => value.maxOutputTokens < value.contextWindowTokens, {
+        path: ["maxOutputTokens"],
+        error: "must be smaller than contextWindowTokens",
+      })
+      .optional(),
+  })
+  .refine(
+    (value) =>
+      value.checkpoint === undefined ||
+      (value.capabilities ?? []).includes(value.checkpoint.capability),
+    { path: ["checkpoint", "capability"], error: "must be attached to the agent" },
+  );
 export function agent<TState, TOutput = never>(
   definition: AgentDefinition<TState, TOutput>,
 ): Agent<TState> {
@@ -1006,152 +1084,21 @@ export function agent<TState, TOutput = never>(
   if (!rawOutput || typeof definition.instructions !== "string") {
     requireInstructions(definition.instructions, `Agent '${definition.id}' instructions`);
   }
-  const reasoningEffort = definition.reasoning?.effort;
-  const reasoningMaxTokens = definition.reasoning?.maxTokens;
-  if (
-    definition.reasoning &&
-    (reasoningEffort !== undefined) === (reasoningMaxTokens !== undefined)
-  ) {
-    throw new TandemError(
-      `Agent '${definition.id}' reasoning must specify exactly one of effort or maxTokens.`,
-    );
-  }
-  if (
-    reasoningEffort !== undefined &&
-    !["none", "low", "medium", "high"].includes(reasoningEffort)
-  ) {
-    throw new TandemError(`Agent '${definition.id}' has an invalid reasoning effort.`);
-  }
-  if (reasoningMaxTokens !== undefined) {
-    if (
-      !Number.isSafeInteger(reasoningMaxTokens) ||
-      reasoningMaxTokens < 1024 ||
-      reasoningMaxTokens > 2_147_483_647
-    ) {
-      throw new TandemError(
-        `Agent '${definition.id}' reasoning maxTokens must be a 32-bit integer of at least 1024.`,
-      );
-    }
-  }
-  if (definition.output) {
-    if (!rawOutput || typeof definition.output.instructions !== "string") {
-      requireInstructions(
-        definition.output.instructions,
-        `Agent '${definition.id}' output instructions`,
-      );
-    }
-    if ("raw" in definition.output) {
-      if (definition.output.raw !== true) {
-        throw new TandemError(`Agent '${definition.id}' output raw must be true.`);
-      }
-      if ("schema" in definition.output) {
-        throw new TandemError(
-          `Agent '${definition.id}' output schema is forbidden for raw output.`,
-        );
-      }
-      if (typeof definition.output.parse !== "function") {
-        throw new TandemError(`Agent '${definition.id}' raw output requires a parse function.`);
-      }
-    } else if ("parse" in definition.output) {
-      throw new TandemError(`Agent '${definition.id}' output parse requires raw output mode.`);
-    }
-  }
-  const capabilities = definition.capabilities ?? [];
-  const names = new Set<string>();
-  for (const item of capabilities) {
-    if (names.has(item.name)) {
-      throw new TandemError(`Agent '${definition.id}' has duplicate capability '${item.name}'.`);
-    } else {
-      names.add(item.name);
-    }
-  }
-  const skills = definition.skills ?? [];
-  const skillDirectories = new Set<string>();
-  for (const item of skills) {
-    if (typeof item?.directory !== "string" || item.directory.trim().length === 0) {
-      throw new TandemError(`Agent '${definition.id}' has a skill with an invalid directory.`);
-    }
-    if (!skillDirectories.add(item.directory)) {
-      throw new TandemError(
-        `Agent '${definition.id}' has the skill directory '${item.directory}' more than once.`,
-      );
-    }
-  }
-  if (
-    definition.temperature !== undefined &&
-    (!Number.isFinite(definition.temperature) ||
-      definition.temperature < 0 ||
-      definition.temperature > 2)
-  ) {
-    throw new TandemError(`Agent '${definition.id}' temperature must be between 0 and 2.`);
-  }
-  if (
-    definition.maxOutputTokens !== undefined &&
-    (!Number.isSafeInteger(definition.maxOutputTokens) ||
-      definition.maxOutputTokens <= 0 ||
-      definition.maxOutputTokens > 2_147_483_647)
-  ) {
-    throw new TandemError(
-      `Agent '${definition.id}' maxOutputTokens must be a positive 32-bit integer.`,
+  if (definition.output && (!rawOutput || typeof definition.output.instructions !== "string")) {
+    requireInstructions(
+      definition.output.instructions,
+      `Agent '${definition.id}' output instructions`,
     );
   }
   if (definition.checkpoint) {
-    const checkpoint = definition.checkpoint;
-    if (
-      !Number.isSafeInteger(checkpoint.contextWindowTokens) ||
-      checkpoint.contextWindowTokens <= 0 ||
-      checkpoint.contextWindowTokens > 2_147_483_647
-    ) {
-      throw new TandemError(
-        `Agent '${definition.id}' checkpoint contextWindowTokens must be a positive 32-bit integer.`,
-      );
-    }
-    if (
-      !Number.isSafeInteger(checkpoint.maxOutputTokens) ||
-      checkpoint.maxOutputTokens <= 0 ||
-      checkpoint.maxOutputTokens > 2_147_483_647 ||
-      checkpoint.maxOutputTokens >= checkpoint.contextWindowTokens
-    ) {
-      throw new TandemError(
-        `Agent '${definition.id}' checkpoint maxOutputTokens must be a positive 32-bit integer smaller than contextWindowTokens.`,
-      );
-    }
-    if (
-      !Number.isSafeInteger(checkpoint.checkpointAtPercent) ||
-      checkpoint.checkpointAtPercent <= 0 ||
-      checkpoint.checkpointAtPercent >= 100
-    ) {
-      throw new TandemError(
-        `Agent '${definition.id}' checkpoint checkpointAtPercent must be between 1 and 99.`,
-      );
-    }
-    if (!capabilities.includes(checkpoint.capability)) {
-      throw new TandemError(
-        `Agent '${definition.id}' checkpoint capability must be attached to the agent.`,
-      );
-    }
     requireInstructions(
-      checkpoint.instructions,
+      definition.checkpoint.instructions,
       `Agent '${definition.id}' checkpoint instructions`,
     );
-    if (
-      checkpoint.session !== undefined &&
-      checkpoint.session !== "retain" &&
-      checkpoint.session !== "reset"
-    ) {
-      throw new TandemError(
-        `Agent '${definition.id}' checkpoint session must be 'retain' or 'reset'.`,
-      );
-    }
-    if (
-      checkpoint.disableCompaction !== undefined &&
-      typeof checkpoint.disableCompaction !== "boolean"
-    ) {
-      throw new TandemError(
-        `Agent '${definition.id}' checkpoint disableCompaction must be a boolean.`,
-      );
-    }
   }
+  parseDefinition(agentOptionsSchema, definition, `Agent '${definition.id}'`);
+  const capabilities = definition.capabilities ?? [];
+  const skills = definition.skills ?? [];
   return new AgentImplementation(
     definition.id,
     definition.persist,
@@ -1219,27 +1166,24 @@ export function parallel<TState>(
   }
   return createParallel(definition);
 }
+const parallelOptionsSchema = z.object({
+  max: positiveInt32.optional(),
+  branches: z
+    .record(z.string(), z.custom())
+    .refine((branches) => Object.keys(branches).every((id) => id.trim().length > 0), {
+      error: "must not have a blank branch ID",
+    })
+    .refine((branches) => Object.keys(branches).length >= 2, {
+      error: "requires at least two branches",
+    })
+    .refine((branches) => hasUnique(Object.values(branches), (participant) => participant), {
+      error: "must own a distinct participant per branch",
+    }),
+});
 function createParallel<TState, TBranches extends ParallelBranches<TState>>(
   definition: ParallelDefinition<TState, TBranches>,
 ): Parallel<TState> {
-  if (
-    definition.max !== undefined &&
-    (!Number.isInteger(definition.max) || definition.max < 1 || definition.max > 2147483647)
-  ) {
-    throw new TandemError(
-      `Parallel group '${definition.id}' max must be a positive 32-bit integer.`,
-    );
-  }
-  const entries = Object.entries(definition.branches);
-  if (entries.length < 2) {
-    throw new TandemError(`Parallel group '${definition.id}' requires at least two branches.`);
-  }
-  const participants = new Set(entries.map(([, participant]) => participant));
-  if (participants.size !== entries.length) {
-    throw new TandemError(
-      `Parallel group '${definition.id}' must own a distinct participant per branch.`,
-    );
-  }
+  parseDefinition(parallelOptionsSchema, definition, `Parallel group '${definition.id}'`);
   return new ParallelImplementation(
     definition.id,
     definition.persist,
@@ -1334,9 +1278,6 @@ export function pipeline<TState>(definition: {
     }
     const parallelNode = node as ParallelImplementation<TState, ParallelBranches<TState>>;
     for (const [branchId, participant] of Object.entries(parallelNode.branches)) {
-      if (branchId.trim().length === 0) {
-        throw new Error(`Parallel group '${node.id}' contains a blank branch ID.`);
-      }
       if (members.has(participant)) {
         throw new Error(
           `Parallel branch participant '${participant.id}' cannot also be a parent pipeline node.`,
@@ -1916,6 +1857,20 @@ function requireInstructions(instructions: string, boundary: string): void {
       { path: "$", message: "Instructions must be a non-blank string." },
     ]);
   }
+}
+/** Authoring errors read as "<subject> <field path> <problem>", e.g. "Agent 'a' checkpoint session must be ...". */
+function parseDefinition<T>(schema: z.ZodType<T>, value: unknown, subject: string): T {
+  const result = schema.safeParse(value);
+  if (result.success) {
+    return result.data;
+  }
+  const problems = result.error.issues.map((issue) => {
+    const field = issue.path
+      .map((part) => (typeof part === "number" ? `[${part}]` : ` ${String(part)}`))
+      .join("");
+    return `${field} ${issue.message}`;
+  });
+  throw new TandemError(`${subject}${problems.join(";")}.`);
 }
 function interactionHandlerEntries(
   handlers: InteractionHandlers | undefined,
