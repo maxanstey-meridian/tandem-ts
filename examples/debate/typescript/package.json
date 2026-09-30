@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "run": "tsx src/run.ts",
+    "start": "tsx src/run.ts",
     "typecheck": "tsc --noEmit --strict --target ES2022 --module NodeNext --moduleResolution NodeNext --types node --typeRoots ../../../node_modules/@types src/*.ts tandem.config.ts"
   },
   "dependencies": {
