@@ -2,12 +2,12 @@
   "name": "@maxanstey-meridian/tandem-packets",
   "version": "0.1.0",
   "description": "Typed Markdown and YAML packet file parsing for Tandem applications",
-  "homepage": "https://github.com/maxanstey-meridian/tandem#readme",
+  "homepage": "https://github.com/maxanstey-meridian/tandem-ts/tree/main/packets#readme",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/maxanstey-meridian/tandem.git",
-    "directory": "typescript/packages/packets"
+    "url": "git+https://github.com/maxanstey-meridian/tandem-ts.git",
+    "directory": "packets"
   },
   "files": [
     "dist"
@@ -23,7 +23,8 @@
     "access": "public"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc -p tsconfig.json"
+    "build": "rm -rf dist && tsc -p tsconfig.json",
+    "prepack": "pnpm build"
   },
   "dependencies": {
     "yaml": "^2.8.1"

@@ -1,6 +1,13 @@
 # `@maxanstey-meridian/tandem-packets`
 
-Read Markdown packet files with YAML frontmatter into an application-owned Zod schema:
+Read Markdown packet files with YAML frontmatter into an application-owned Zod schema.
+
+```sh
+npm install @maxanstey-meridian/tandem-packets zod
+```
+
+Requires Node 22+ and an ES module project (`"type": "module"`).
+
 
 ```ts
 import { readPacketFile } from "@maxanstey-meridian/tandem-packets";
