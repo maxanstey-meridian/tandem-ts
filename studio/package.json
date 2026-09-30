@@ -21,7 +21,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json && nuxt prepare",
     "typecheck": "tsc -p tsconfig.json && nuxt prepare && vue-tsc --noEmit -p .nuxt/tsconfig.app.json && vue-tsc --noEmit -p .nuxt/tsconfig.server.json",
-    "test": "node --import tsx --test tests/*.test.ts && vitest run"
+    "test": "node --import tsx --test tests/*.test.ts && vitest run",
+    "prepack": "pnpm build"
   },
   "dependencies": {
     "@codemirror/lang-javascript": "^6.2.4",
@@ -53,5 +54,14 @@
     "typescript": "^5.9.3",
     "vitest": "^4.1.11",
     "vue-tsc": "^3.1.5"
+  },
+  "homepage": "https://github.com/maxanstey-meridian/tandem-ts/tree/main/studio#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maxanstey-meridian/tandem-ts.git",
+    "directory": "studio"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }
