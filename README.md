@@ -151,6 +151,10 @@ for the commands and environment variables.
 
 ## Development and publishing
 
+This repository is a [pnpm](https://pnpm.io) workspace. `package.json` pins pnpm 11.22.0 in
+`packageManager`; a newer pnpm switches to that version on its own, or run
+`corepack enable pnpm`. Tests also need the .NET 10 runtime.
+
 ```sh
 pnpm install
 pnpm build
