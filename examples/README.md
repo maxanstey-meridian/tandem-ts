@@ -44,13 +44,13 @@ with code 2. Model calls are billed to that OpenRouter account.
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `OPENROUTER_API_KEY` | yes | Authenticates both models on OpenRouter. |
-| `TANDEM_EXAMPLE_LOCAL_BASE_URL` | no | Sends the second model to an OpenAI-compatible server at this base URL (for example `http://127.0.0.1:10531/v1`) using the Responses API. Tandem checks that the server lists the model before the run starts. |
+| `TANDEM_EXAMPLE_LOCAL_BASE_URL` | no | Sends the second model to a keyless OpenAI-compatible server on this machine (`localhost`, `127.x.x.x` or `[::1]`, for example `http://127.0.0.1:10531/v1`) using the Responses API. Tandem checks that the server lists the model before the run starts. |
 | `TANDEM_EXAMPLE_LOCAL_MODEL` | no | Overrides the second model's ID. Defaults to `openai/gpt-5.6-sol` on OpenRouter, or `gpt-5.6-sol` on the local server. |
 
 The first model (the songwriter, proposer or implementer) is always
 `deepseek/deepseek-v4-flash-0731` on OpenRouter. The second model (the proofreader, critic and
-judge, or reviewer) uses OpenRouter unless `TANDEM_EXAMPLE_LOCAL_BASE_URL` is set. If that URL
-cannot be reached, the example names the variable and exits with code 2.
+judge, or reviewer) uses OpenRouter unless `TANDEM_EXAMPLE_LOCAL_BASE_URL` is set. If that URL is
+not a local http(s) URL or cannot be reached, the example names the variable and exits with code 2.
 
 The debate example also has a `tandem.config.ts` so [Tandem Studio](../studio) can show its
 pipeline. Loading it does not call a model.

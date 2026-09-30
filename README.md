@@ -190,8 +190,8 @@ tar -xzf tandem-bridge-<version>-darwin-arm64.tar.gz -C runtime/darwin-arm64
 ```
 
 To build a bundle from a Tandem checkout instead, run this there for each RID (`osx-arm64` for
-`darwin-arm64`, `linux-x64` for `linux-x64`), then copy `bridge-runtime/` over the matching
-`runtime/<platform>` directory:
+`darwin-arm64`, `linux-x64` for `linux-x64`), then replace the matching `runtime/<platform>`
+directory with `bridge-runtime/` (delete it first, so files the new build dropped do not linger):
 
 ```sh
 dotnet publish bridge/Tandem.Bridge.csproj -c Release -p:Version=<version> -r osx-arm64 --self-contained false --output .runtime-publish
