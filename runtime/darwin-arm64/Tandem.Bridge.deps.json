@@ -16,7 +16,6 @@
           "Meridian.Tandem.Terminal": "0.3.0",
           "Microsoft.Extensions.AI.OpenAI": "10.8.3",
           "Microsoft.JavaScript.NodeApi": "0.9.26",
-          "Microsoft.JavaScript.NodeApi.Generator": "0.9.26",
           "OpenAI": "2.12.0",
           "System.ClientModel": "1.14.0",
           "Tandem.Advanced": "0.3.0.0",
@@ -138,107 +137,6 @@
           "lib/net10.0/Microsoft.Agents.AI.Workflows.dll": {
             "assemblyVersion": "1.16.0.0",
             "fileVersion": "1.16.0.0"
-          }
-        }
-      },
-      "Microsoft.CodeAnalysis.Common/4.1.0": {
-        "runtime": {
-          "lib/netcoreapp3.1/Microsoft.CodeAnalysis.dll": {
-            "assemblyVersion": "4.1.0.0",
-            "fileVersion": "4.100.22.11411"
-          }
-        },
-        "resources": {
-          "lib/netcoreapp3.1/cs/Microsoft.CodeAnalysis.resources.dll": {
-            "locale": "cs"
-          },
-          "lib/netcoreapp3.1/de/Microsoft.CodeAnalysis.resources.dll": {
-            "locale": "de"
-          },
-          "lib/netcoreapp3.1/es/Microsoft.CodeAnalysis.resources.dll": {
-            "locale": "es"
-          },
-          "lib/netcoreapp3.1/fr/Microsoft.CodeAnalysis.resources.dll": {
-            "locale": "fr"
-          },
-          "lib/netcoreapp3.1/it/Microsoft.CodeAnalysis.resources.dll": {
-            "locale": "it"
-          },
-          "lib/netcoreapp3.1/ja/Microsoft.CodeAnalysis.resources.dll": {
-            "locale": "ja"
-          },
-          "lib/netcoreapp3.1/ko/Microsoft.CodeAnalysis.resources.dll": {
-            "locale": "ko"
-          },
-          "lib/netcoreapp3.1/pl/Microsoft.CodeAnalysis.resources.dll": {
-            "locale": "pl"
-          },
-          "lib/netcoreapp3.1/pt-BR/Microsoft.CodeAnalysis.resources.dll": {
-            "locale": "pt-BR"
-          },
-          "lib/netcoreapp3.1/ru/Microsoft.CodeAnalysis.resources.dll": {
-            "locale": "ru"
-          },
-          "lib/netcoreapp3.1/tr/Microsoft.CodeAnalysis.resources.dll": {
-            "locale": "tr"
-          },
-          "lib/netcoreapp3.1/zh-Hans/Microsoft.CodeAnalysis.resources.dll": {
-            "locale": "zh-Hans"
-          },
-          "lib/netcoreapp3.1/zh-Hant/Microsoft.CodeAnalysis.resources.dll": {
-            "locale": "zh-Hant"
-          }
-        }
-      },
-      "Microsoft.CodeAnalysis.CSharp/4.1.0": {
-        "dependencies": {
-          "Microsoft.CodeAnalysis.Common": "4.1.0"
-        },
-        "runtime": {
-          "lib/netcoreapp3.1/Microsoft.CodeAnalysis.CSharp.dll": {
-            "assemblyVersion": "4.1.0.0",
-            "fileVersion": "4.100.22.11411"
-          }
-        },
-        "resources": {
-          "lib/netcoreapp3.1/cs/Microsoft.CodeAnalysis.CSharp.resources.dll": {
-            "locale": "cs"
-          },
-          "lib/netcoreapp3.1/de/Microsoft.CodeAnalysis.CSharp.resources.dll": {
-            "locale": "de"
-          },
-          "lib/netcoreapp3.1/es/Microsoft.CodeAnalysis.CSharp.resources.dll": {
-            "locale": "es"
-          },
-          "lib/netcoreapp3.1/fr/Microsoft.CodeAnalysis.CSharp.resources.dll": {
-            "locale": "fr"
-          },
-          "lib/netcoreapp3.1/it/Microsoft.CodeAnalysis.CSharp.resources.dll": {
-            "locale": "it"
-          },
-          "lib/netcoreapp3.1/ja/Microsoft.CodeAnalysis.CSharp.resources.dll": {
-            "locale": "ja"
-          },
-          "lib/netcoreapp3.1/ko/Microsoft.CodeAnalysis.CSharp.resources.dll": {
-            "locale": "ko"
-          },
-          "lib/netcoreapp3.1/pl/Microsoft.CodeAnalysis.CSharp.resources.dll": {
-            "locale": "pl"
-          },
-          "lib/netcoreapp3.1/pt-BR/Microsoft.CodeAnalysis.CSharp.resources.dll": {
-            "locale": "pt-BR"
-          },
-          "lib/netcoreapp3.1/ru/Microsoft.CodeAnalysis.CSharp.resources.dll": {
-            "locale": "ru"
-          },
-          "lib/netcoreapp3.1/tr/Microsoft.CodeAnalysis.CSharp.resources.dll": {
-            "locale": "tr"
-          },
-          "lib/netcoreapp3.1/zh-Hans/Microsoft.CodeAnalysis.CSharp.resources.dll": {
-            "locale": "zh-Hans"
-          },
-          "lib/netcoreapp3.1/zh-Hant/Microsoft.CodeAnalysis.CSharp.resources.dll": {
-            "locale": "zh-Hant"
           }
         }
       },
@@ -452,18 +350,6 @@
           }
         }
       },
-      "Microsoft.JavaScript.NodeApi.Generator/0.9.26": {
-        "dependencies": {
-          "Microsoft.CodeAnalysis.CSharp": "4.1.0",
-          "System.Reflection.MetadataLoadContext": "6.0.0"
-        },
-        "runtime": {
-          "lib/net10.0/Microsoft.JavaScript.NodeApi.Generator.dll": {
-            "assemblyVersion": "0.9.0.0",
-            "fileVersion": "0.9.26.29850"
-          }
-        }
-      },
       "Microsoft.ML.Tokenizers/2.0.0": {
         "dependencies": {
           "Google.Protobuf": "3.30.2"
@@ -589,14 +475,6 @@
           "lib/net10.0/System.Numerics.Tensors.dll": {
             "assemblyVersion": "10.0.0.10",
             "fileVersion": "10.0.1026.32716"
-          }
-        }
-      },
-      "System.Reflection.MetadataLoadContext/6.0.0": {
-        "runtime": {
-          "lib/net6.0/System.Reflection.MetadataLoadContext.dll": {
-            "assemblyVersion": "6.0.0.0",
-            "fileVersion": "6.0.21.52210"
           }
         }
       },
@@ -786,20 +664,6 @@
       "path": "microsoft.agents.ai.workflows/1.16.0",
       "hashPath": "microsoft.agents.ai.workflows.1.16.0.nupkg.sha512"
     },
-    "Microsoft.CodeAnalysis.Common/4.1.0": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-bNzTyxP3iD5FPFHfVDl15Y6/wSoI7e3MeV0lOaj9igbIKTjgrmuw6LoVJ06jUNFA7+KaDC/OIsStWl/FQJz6sQ==",
-      "path": "microsoft.codeanalysis.common/4.1.0",
-      "hashPath": "microsoft.codeanalysis.common.4.1.0.nupkg.sha512"
-    },
-    "Microsoft.CodeAnalysis.CSharp/4.1.0": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-sbu6kDGzo9bfQxuqWpeEE7I9P30bSuZEnpDz9/qz20OU6pm79Z63+/BsAzO2e/R/Q97kBrpj647wokZnEVr97w==",
-      "path": "microsoft.codeanalysis.csharp/4.1.0",
-      "hashPath": "microsoft.codeanalysis.csharp.4.1.0.nupkg.sha512"
-    },
     "Microsoft.Data.Sqlite/10.0.10": {
       "type": "package",
       "serviceable": true,
@@ -940,13 +804,6 @@
       "path": "microsoft.javascript.nodeapi/0.9.26",
       "hashPath": "microsoft.javascript.nodeapi.0.9.26.nupkg.sha512"
     },
-    "Microsoft.JavaScript.NodeApi.Generator/0.9.26": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-U5fd2aoVSwzUHcHho1Wp1Aa9nauNqctqNoOeKr3Ftm4lvO0tri35yEIq8hHNkQ299+B07woyRNdeDLB99JL5Rg==",
-      "path": "microsoft.javascript.nodeapi.generator/0.9.26",
-      "hashPath": "microsoft.javascript.nodeapi.generator.0.9.26.nupkg.sha512"
-    },
     "Microsoft.ML.Tokenizers/2.0.0": {
       "type": "package",
       "serviceable": true,
@@ -1037,13 +894,6 @@
       "sha512": "sha512-9Ildb4Y9maDztB0ZRGxsNShbpCQ2Tjv2dr4IjskBxpTGhH7aIz1+oC+Hl833ASs/htWwsH6myNe+sRpeyCzeMQ==",
       "path": "system.numerics.tensors/10.0.10",
       "hashPath": "system.numerics.tensors.10.0.10.nupkg.sha512"
-    },
-    "System.Reflection.MetadataLoadContext/6.0.0": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-SuK8qTHbmG3PToLo1TEq8YSfY31FiKhASBmjozUTAleDgiX4H2X4jm0VPFb+K2soSSmYPyHTpHp35TctfNtDzQ==",
-      "path": "system.reflection.metadataloadcontext/6.0.0",
-      "hashPath": "system.reflection.metadataloadcontext.6.0.0.nupkg.sha512"
     },
     "Tavily/1.0.1": {
       "type": "package",
