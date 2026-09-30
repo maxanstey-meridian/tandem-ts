@@ -56,29 +56,19 @@ const result = await run(normalizeInput, { input: "  Hello  ", normalized: null 
 console.log(result.state.normalized);
 ```
 
-State holds application facts, participants perform work, and routes decide what runs next. See the
-[examples](https://github.com/maxanstey-meridian/tandem-ts/tree/main/examples) for agents,
-capabilities, interactions, persistence, and complete examples.
-
-Licensed under the [MIT License](./LICENSE).
-
-For a specialised model that requires a plain user message, a raw-output agent
-can set both `instructions` and `output.instructions` to `""`. Tandem then sends
-the authored message without system instructions or a response-format constraint.
-Other agent/output modes still require nonblank instructions.
-
-## Development and publishing
+The package is ESM-only, and a project created by `npm init` is CommonJS, so save the code as
+`index.mts`:
 
 ```sh
-pnpm install
-pnpm build
-pnpm test
-npm pack
+node index.mts
 ```
 
-`npm pack` and `npm publish` build fresh output before packaging. The npm package contains
-`dist`, including the vendored platform bridge bundles in `dist/runtime`. Update each runtime
-bundle from a tested Tandem bridge build before releasing runtime changes.
+To use `index.ts` instead, first mark the project as ESM with `npm pkg set type=module`, then run
+`node index.ts`. Node.js 22.18 or newer runs TypeScript directly by stripping types; on older
+Node.js 22 releases, use `npx tsx index.mts`. The program prints `hello`.
+
+State holds application facts, participants perform work, and routes decide what runs next. See the
+[examples](#examples) for routing, persistence and complete model-backed pipelines.
 
 ## Runtime-sized collections
 
@@ -94,6 +84,33 @@ completion and sibling parallel agent calls are rejected. Operational failure
 fails the collection, drains active work, and skips application of results.
 
 ```ts
+import { collection, taskAgent, type ChatClient } from "@maxanstey-meridian/tandem";
+import { z } from "zod";
+
+const client = {
+  kind: "openai-compatible",
+  version: 1,
+  endpoint: "https://openrouter.ai/api/v1",
+  model: "deepseek/deepseek-v4-flash-0731",
+  wireApi: "completions",
+  apiKeyEnvironmentVariable: "OPENROUTER_API_KEY",
+} as const satisfies ChatClient;
+
+const Proposition = z.string();
+const Claim = z.object({ subject: z.string(), statement: z.string() });
+const SourceState = z.object({ propositions: z.array(Proposition), claims: z.array(Claim) });
+type SourceState = z.infer<typeof SourceState>;
+
+const canonicaliser = taskAgent({
+  id: "canonicaliser",
+  instructions: "Restate the proposition as one canonical claim.",
+  client,
+  input: Proposition,
+  result: Claim,
+  message: (proposition) => proposition,
+  output: { instructions: "Return the claim's subject and statement.", schema: Claim },
+});
+
 const canonicalise = collection({
   id: "canonicalise",
   item: Proposition,
@@ -102,11 +119,13 @@ const canonicalise = collection({
   max: 6,
   items: (state: SourceState) => state.propositions,
   execute: (proposition, context) => context.run(canonicaliser, proposition),
-  apply: (state, claims) => ({ ...state, claims }),
+  apply: (state, claims) => ({ ...state, claims: [...claims] }),
 });
 ```
 
-The executable [collection example](tests/collection-child.ts) includes
+Add `canonicalise` to a pipeline's `nodes` and `routes` like any other participant.
+
+The executable [collection test](tests/collection-child.ts) includes
 conditional recovery, persistence, cancellation and concurrent source runs.
 Agent visits remain in the source run's native observations and ledger.
 
@@ -114,3 +133,35 @@ Agent definitions may be reused across collections. Native Tandem binds each und
 its collection name. Scoped observations and accepted ledger values carry a
 `visitId` so concurrent calls can be correlated without changing their semantic
 `stepId`.
+
+## Raw-output agents
+
+For a specialised model that requires a plain user message, a raw-output agent
+can set both `instructions` and `output.instructions` to `""`. Tandem then sends
+the authored message without system instructions or a response-format constraint.
+Other agent/output modes still require nonblank instructions.
+
+## Examples
+
+The [examples](https://github.com/maxanstey-meridian/tandem-ts/tree/main/examples) run from a
+clone of this repository. The getting-started examples need no model or API key; the songwriter,
+debate and code-writer examples need an OpenRouter API key. See
+[examples/README.md](https://github.com/maxanstey-meridian/tandem-ts/blob/main/examples/README.md)
+for the commands and environment variables.
+
+## Development and publishing
+
+```sh
+pnpm install
+pnpm build
+pnpm test
+npm pack
+```
+
+`npm pack` and `npm publish` build fresh output before packaging. The npm package contains
+`dist`, including the vendored platform bridge bundles in `dist/runtime`. Update each runtime
+bundle from a tested Tandem bridge build before releasing runtime changes.
+
+## License
+
+Licensed under the [MIT License](./LICENSE).
